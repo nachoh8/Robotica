@@ -49,6 +49,7 @@ def simubot(vc,xWR,T):
 def norm_pi(x):
   return math.radians(x if x <= 180 else x - 360)
 
+
 def hom(xWR: np.array) -> np.array:
   c = np.cos(xWR[2])
   s = np.sin(xWR[2])

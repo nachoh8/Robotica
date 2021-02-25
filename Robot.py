@@ -3,9 +3,22 @@
 from __future__ import print_function # use python 3 syntax but make it compatible with python 2
 from __future__ import division       #                           ''
 
-#import brickpi3 # import the BrickPi3 drivers
 import time     # import the time library for the sleep function
 import sys
+import math
+
+import simulation as sim
+
+
+debug = True
+
+if debug:
+    from DebugBlockPi import DebugBlockPi
+    BP = DebugBlockPi()
+else:
+    import brickpi3
+    BP = brickpi3.BrickPi3()
+
 
 # tambien se podria utilizar el paquete de threading
 from multiprocessing import Process, Value, Array, Lock
@@ -17,10 +30,11 @@ class Robot:
 
         Initialize Motors and Sensors according to the set up in your robot
         """
-
 ######## UNCOMMENT and FILL UP all you think is necessary (following the suggested scheme) ########
 
         # Robot construction parameters
+        self.radio_rueda = 0.028
+        self.long_ruedas = 0.17 # TODO: medir la distancia entre las dos ruedas
         #self.R = ??
         #self.L = ??
         #self. ...
@@ -59,18 +73,24 @@ class Robot:
 
 
     def setSpeed(self, v,w):
-        """ To be filled - These is all dummy sample code """
+        """
+        * Pre:
+        - v: linear velocity m/s
+        - w: angular velocity rad/s
+        * Post:
+        - Le da caña a los motores
+        """
+
         print("setting speed to %.2f %.2f" % (v, w))
 
         # compute the speed that should be set in each motor ...
+        wMotorR = [1/self.radio_rueda, self.long_ruedas/(2 * self.radio_rueda)]
+        wMotorL = [wMotorR[0], -wMotorR[1]]
 
-        #speedPower = 100
-        #BP.set_motor_power(BP.PORT_B + BP.PORT_C, speedPower)
+        print(str(wMotorR) + " " + str(wMotorL))
 
-        speedDPS_left = 180
-        speedDPS_right = 180
-        #self.BP.set_motor_dps(self.BP.PORT_B, speedDPS_left)
-        #self.BP.set_motor_dps(self.BP.PORT_C, speedDPS_right)
+        self.BP.set_motor_dps(self.BP.PORT_B, math.degrees(wMotorR))
+        self.BP.set_motor_dps(self.BP.PORT_C, math.degrees(wMotorL))
 
 
     def readSpeed(self):
