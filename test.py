@@ -3,7 +3,7 @@ import time
 
 def main():
     robot = Robot()
-    robot.setSpeed(0, 1)
+    robot.setSpeed(0, 0)
     time.sleep(2)
     robot.setSpeed(0, 0)
 

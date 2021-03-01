@@ -35,11 +35,10 @@ class Robot:
 
         # Robot construction parameters
         self.radio_rueda = 0.028
-        self.long_ruedas = 0.17 # TODO: medir la distancia entre las dos ruedas
+        self.long_ruedas = 0.17
         self.BP = BP
-        #self.R = ??
-        #self.L = ??
-        #self. ...
+        self.PORT_LEFT_WHEEL = BP.PORT_C
+        self.PORT_RIGHT_WHEEL = BP.PORT_B
 
         ##################################################
         # Motors and sensors setup
@@ -62,19 +61,22 @@ class Robot:
         self.y = Value('d',0.0)
         self.th = Value('d',0.0)
         self.finished = Value('b',1) # boolean to show if odometry updates are finished
-
+        
+        self.v = Value('d',0.0) # esto solo sirve para el modo debug
+        self.w = Value('d',0.0)
+        
         # if we want to block several instructions to be run together, we may want to use an explicit Lock
         self.lock_odometry = Lock()
-        #self.lock_odometry.acquire()
-        #print('hello world', i)
-        #self.lock_odometry.release()
 
-        # odometry update period --> UPDATE value!
+        # odometry update period
         self.P = 1.0
+        
+        # lectura previa en radianes
+        self.rdMotorR_prev = 0
+        self.rdMotorL_prev = 0
 
 
-
-    def setSpeed(self, v,w):
+    def setSpeed(self, v, w):
         """
         * Pre:
         - v: linear velocity m/s
@@ -83,7 +85,7 @@ class Robot:
         - Le da caña a los motores
         """
 
-        print("setting speed to %.2f %.2f" % (v, w))
+        # print("setting speed to %.2f %.2f" % (v, w))
 
         # compute the speed that should be set in each motor ...
         wMotorR = np.array([1/self.radio_rueda, self.long_ruedas/(2 * self.radio_rueda)]).dot(np.array([v, w]))
@@ -91,23 +93,65 @@ class Robot:
 
         print(str(wMotorR) + " " + str(wMotorL))
 
-        self.BP.set_motor_dps(self.BP.PORT_B, math.degrees(wMotorR))
-        self.BP.set_motor_dps(self.BP.PORT_C, math.degrees(wMotorL))
+        self.BP.set_motor_dps(self.PORT_RIGHT_WHEEL, math.degrees(wMotorR))
+        self.BP.set_motor_dps(self.PORT_LEFT_WHEEL, math.degrees(wMotorL))
         
-        # update odometry
-        # lock
-        # update
-        # unlock
+        # update debug velocity
+        if debug:
+                self.lock_odometry.acquire()
+                self.v = v
+                self.w = w
+                self.lock_odometry.release()
 
 
     def readSpeed(self):
-        """ To be filled"""
+        self.lock_odometry.acquire()	
+        if debug:
+                v = self.v.value
+                w = self.w.value
+        else:
+                # Lectura de los grados de giro de la rueda en un instante
+                grMotorR = self.BP.get_motor_encoder(self.BP.PORT_B)
+                grMotorL = self.BP.get_motor_encoder(self.BP.PORT_C)
+                
+                rdMotorR = math.radians(grMotorR)
+                rdMotorL = math.radians(grMotorL)
+        
+                # Tiempo transcurrido entre lecturas
+                t_prev = self.encoder_timer
+                self.encoder_timer = time.time()
+                
+                t = self.encoder_timer - t_prev
+                
+                # Calculo velocidades angulares en cada motor
+                wMotorR = (rdMotorR - self.rdMotorR_prev) / t
+                wMotorL = (rdMotorL - self.rdMotorL_prev) / t
+                  
+                # Calculo velocidades actuales
+                v_w = np.array([[self.radio_rueda / 2, self.radio_rueda / 2],
+                                [self.radio_rueda / self.long_ruedas, -self.radio_rueda / self.long_ruedas]
+                               ]).dot(np.array([wMotorR, wMotorL]))
 
-        return 0,0
+                # Actualizacion de variables
+                self.rdMotorR_prev = rdMotorR
+                self.rdMotorL_prev = rdMotorL
+                        
+                v = v_w[0]
+                w = v_w[1]
+
+        self.lock_odometry.release()
+
+        return v, w
 
     def readOdometry(self):
         """ Returns current value of odometry estimation """
-        return self.x.value, self.y.value, self.th.value
+        self.lock_odometry.acquire()
+        x = self.x.value
+        y = self.y.value
+        th = self.th.value
+        self.lock_odometry.release()
+        
+        return x, y, th
 
     def startOdometry(self):
         """ This starts a new process/thread that will be updating the odometry periodically """
@@ -129,20 +173,26 @@ class Robot:
             ######## UPDATE FROM HERE with your code (following the suggested scheme) ########
             sys.stdout.write("Dummy update of odometry ...., X=  %d, \
                 Y=  %d, th=  %d \n" %(self.x.value, self.y.value, self.th.value) )
-            #print("Dummy update of odometry ...., X=  %.2f" %(self.x.value) )
+            
+            x = x.value
+            y = y.value
+            th = th.value
+            
+            v,w = self.readSpeed()
+            if w == 0: # moviemiento recto
+                    x += self.P * v * math.cos(th)
+                    y += self.P * v * math.sin(th)
+            else: # movimiento circular
+                    div = v/w
+                    thAux = th + w * self.P
+                    x += div * (math.sin(thAux) - math.sin(th))
+                    y -= div * (math.cos(thAux) - math.cos(th))
 
-            # update odometry uses values that require mutex
-            # (they are declared as value, so lock is implicitly done for atomic operations, BUT =+ is NOT atomic)
-
-            # Operations like += which involve a read and write are not atomic.
-            with self.x.get_lock():
-                self.x.value+=1
-
-            # to "lock" a whole set of operations, we can use a "mutex"
+            # update odometry values
             self.lock_odometry.acquire()
-            #self.x.value+=1
-            self.y.value+=1
-            self.th.value+=1
+            self.x.value = x
+            self.y.value = y
+            self.th.value = th + w * self.P
             self.lock_odometry.release()
 
             try:
