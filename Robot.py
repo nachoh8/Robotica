@@ -8,9 +8,10 @@ import sys
 import math
 
 import simulation as sim
+import numpy as np
 
 
-debug = True
+debug = False
 
 if debug:
     from DebugBlockPi import DebugBlockPi
@@ -35,6 +36,7 @@ class Robot:
         # Robot construction parameters
         self.radio_rueda = 0.028
         self.long_ruedas = 0.17 # TODO: medir la distancia entre las dos ruedas
+        self.BP = BP
         #self.R = ??
         #self.L = ??
         #self. ...
@@ -84,13 +86,18 @@ class Robot:
         print("setting speed to %.2f %.2f" % (v, w))
 
         # compute the speed that should be set in each motor ...
-        wMotorR = [1/self.radio_rueda, self.long_ruedas/(2 * self.radio_rueda)]
-        wMotorL = [wMotorR[0], -wMotorR[1]]
+        wMotorR = np.array([1/self.radio_rueda, self.long_ruedas/(2 * self.radio_rueda)]).dot(np.array([v, w]))
+        wMotorL = np.array([1/self.radio_rueda, -self.long_ruedas/(2 * self.radio_rueda)]).dot(np.array([v, w]))
 
         print(str(wMotorR) + " " + str(wMotorL))
 
         self.BP.set_motor_dps(self.BP.PORT_B, math.degrees(wMotorR))
         self.BP.set_motor_dps(self.BP.PORT_C, math.degrees(wMotorL))
+        
+        # update odometry
+        # lock
+        # update
+        # unlock
 
 
     def readSpeed(self):
