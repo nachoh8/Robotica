@@ -69,11 +69,14 @@ class Robot:
         self.lock_odometry = Lock()
 
         # odometry update period
-        self.P = 1.0
+        self.P = 0.03
         
         # lectura previa en radianes
         self.rdMotorR_prev = 0
         self.rdMotorL_prev = 0
+        
+        # 
+        self.encoder_timer = 0
 
 
     def setSpeed(self, v, w):
@@ -118,10 +121,10 @@ class Robot:
                 rdMotorL = math.radians(grMotorL)
         
                 # Tiempo transcurrido entre lecturas
-                t_prev = self.encoder_timer
+                self.t_prev = self.encoder_timer
                 self.encoder_timer = time.time()
                 
-                t = self.encoder_timer - t_prev
+                t = self.encoder_timer - self.t_prev
                 
                 # Calculo velocidades angulares en cada motor
                 wMotorR = (rdMotorR - self.rdMotorR_prev) / t
@@ -169,14 +172,10 @@ class Robot:
             tIni = time.clock()
 
             # compute updates
-
-            ######## UPDATE FROM HERE with your code (following the suggested scheme) ########
-            sys.stdout.write("Dummy update of odometry ...., X=  %d, \
-                Y=  %d, th=  %d \n" %(self.x.value, self.y.value, self.th.value) )
             
-            x = x.value
-            y = y.value
-            th = th.value
+            x = self.x.value
+            y = self.y.value
+            th = self.th.value
             
             v,w = self.readSpeed()
             if w == 0: # moviemiento recto
@@ -193,6 +192,7 @@ class Robot:
             self.x.value = x
             self.y.value = y
             self.th.value = th + w * self.P
+            #print(str(self.x.value) + " " + str(self.y.value) + " " + str(self.th.value) + " " + str(v) + " " + str(w))
             self.lock_odometry.release()
 
             try:
@@ -227,4 +227,5 @@ class Robot:
     def stopOdometry(self):
         self.finished.value = True
         #self.BP.reset_all()
+        self.setSpeed(0,0)
 
