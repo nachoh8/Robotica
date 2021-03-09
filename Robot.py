@@ -7,7 +7,6 @@ import time     # import the time library for the sleep function
 import sys
 import math
 
-import simulation as sim
 import numpy as np
 
 
@@ -24,8 +23,15 @@ else:
 # tambien se podria utilizar el paquete de threading
 from multiprocessing import Process, Value, Array, Lock
 
+
+def norm_pi(rad):
+        if rad >= -np.pi:
+                return -np.pi + (rad + np.pi) % (2 * np.pi)
+        else:
+                return np.pi - (-np.pi - rad) % (2 * np.pi)
+
 class Robot:
-    def __init__(self, init_position=[0.0, 0.0, 0.0]):
+    def __init__(self, init_position=[0.0, 0.0, 0.0], log_file_name="log_odom.txt"):
         """
         Initialize basic robot params. \
 
@@ -34,8 +40,8 @@ class Robot:
 ######## UNCOMMENT and FILL UP all you think is necessary (following the suggested scheme) ########
 
         # Robot construction parameters
-        self.radio_rueda = 0.028
-        self.long_ruedas = 0.17
+        self.radio_rueda = 0.0275
+        self.long_ruedas = 0.115
         self.BP = BP
         self.PORT_LEFT_WHEEL = BP.PORT_C
         self.PORT_RIGHT_WHEEL = BP.PORT_B
@@ -77,7 +83,12 @@ class Robot:
         
         # 
         self.encoder_timer = 0
+        
+        self.log_file = open(log_file_name, "w+")
 
+    def reset():
+            self.BP.set_motor_dps(self.PORT_RIGHT_WHEEL, 0)
+            self.BP.set_motor_dps(self.PORT_LEFT_WHEEL, 0)
 
     def setSpeed(self, v, w):
         """
@@ -97,7 +108,7 @@ class Robot:
         print(str(wMotorR) + " " + str(wMotorL))
 
         self.BP.set_motor_dps(self.PORT_RIGHT_WHEEL, math.degrees(wMotorR))
-        self.BP.set_motor_dps(self.PORT_LEFT_WHEEL, math.degrees(wMotorL))
+        self.BP.set_motor_dps(self.PORT_LEFT_WHEEL, math.degrees(wMotorL) * 0.99)
         
         # update debug velocity
         if debug:
@@ -166,7 +177,7 @@ class Robot:
     # You may want to pass additional shared variables besides the odometry values and stop flag
     def updateOdometry(self): #, additional_params?):
         """ To be filled ...  """
-
+        t_count = 0
         while not self.finished.value:
             # current processor time in a floating point value, in seconds
             tIni = time.clock()
@@ -178,27 +189,33 @@ class Robot:
             th = self.th.value
             
             v,w = self.readSpeed()
+            th_f = 0
             if w == 0: # moviemiento recto
                     x += self.P * v * math.cos(th)
                     y += self.P * v * math.sin(th)
+                    th_f = th
             else: # movimiento circular
                     div = v/w
-                    thAux = th + w * self.P
-                    x += div * (math.sin(thAux) - math.sin(th))
-                    y -= div * (math.cos(thAux) - math.cos(th))
+                    th_f = norm_pi(th + w * self.P)
+                    x += div * (math.sin(th_f) - math.sin(th))
+                    y -= div * (math.cos(th_f) - math.cos(th))
 
             # update odometry values
             self.lock_odometry.acquire()
             self.x.value = x
             self.y.value = y
-            self.th.value = th + w * self.P
+            self.th.value = th_f
             #print(str(self.x.value) + " " + str(self.y.value) + " " + str(self.th.value) + " " + str(v) + " " + str(w))
             self.lock_odometry.release()
-
+            
+            t_count += 1
             try:
                 # Each of the following BP.get_motor_encoder functions returns the encoder value
                 # (what we want to store).
-                sys.stdout.write("Reading encoder values .... \n")
+                if t_count == 10:
+                        t_count = 0
+                        self.log_file.write("x: " + str(x) + " y: " + str(y) + " th: " + str(th_f))
+                #sys.stdout.write("Reading encoder values .... \n")
                 #[encoder1, encoder2] = [self.BP.get_motor_encoder(self.BP.PORT_B),
                 #    self.BP.get_motor_encoder(self.BP.PORT_C)]
             except IOError as error:
@@ -221,11 +238,12 @@ class Robot:
         #print("Stopping odometry ... X= %d" %(self.x.value))
         sys.stdout.write("Stopping odometry ... X=  %.2f, \
                 Y=  %.2f, th=  %.2f \n" %(self.x.value, self.y.value, self.th.value))
-
+                
 
     # Stop the odometry thread.
     def stopOdometry(self):
         self.finished.value = True
         #self.BP.reset_all()
         self.setSpeed(0,0)
+        self.log_file.close()
 

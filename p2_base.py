@@ -3,19 +3,14 @@
 import argparse
 import numpy as np
 import time
-from Robot import Robot
+from Robot import *
 import math
  
 
-def wait_th(robot, th_f):
-        th = 0
-        while math.abs(th) < math.abs(th_f):
-                robot.lock_odometry.acquire()
-                th = robot.th.value
-                print(th)
-                robot.lock_odometry.release()
-        robot.setSpeed(0,0)
-
+def wait_pos():
+        x, y, th = robot.readOdometry()
+        time.sleep(0.1)
+        
 def main(args):
     try:
         if args.radioD < 0:
@@ -35,71 +30,63 @@ def main(args):
 
 
         # DUMMY CODE! delete when you have your own
-        """robot.setSpeed(0.1,0)
-        print("Start : %s" % time.ctime())
-        time.sleep(3)
-        print("X value from main tmp %d" % robot.x.value)
-        time.sleep(3)
-        print("End : %s" % time.ctime())
-
-        robot.lock_odometry.acquire()
-        print("Odom values at main at the END: %.2f, %.2f, %.2f " % (robot.x.value, robot.y.value, robot.th.value))
-        robot.lock_odometry.release()"""
 
         # PART 1:
-        
+        dl = 0.1
         # 90º dch
-        robot.setSpeed(0,-0.5)
-        th = 0
-        while th > -math.pi / 4:
-                robot.lock_odometry.acquire()
-                th = robot.th.value
-                print(th)
-                robot.lock_odometry.release()
-        robot.setSpeed(0,0)
-        #wait_th(robot, -math.pi / 4)
-               
-        # arco izq
-        time.sleep(2)
-        robot.setSpeed(0.1,0.25)
-        th = 0
-        while th < math.pi / 4:
-                robot.lock_odometry.acquire()
-                th = robot.th.value
-                print(th)
-                robot.lock_odometry.release()
-        robot.setSpeed(0,0)
-        
-        # arco dch
-        time.sleep(2)
-        robot.setSpeed(0.1,-0.25)
-        th = 0
-        while th > -math.pi / 4:
-                robot.lock_odometry.acquire()
-                th = robot.th.value
-                print(th)
-                robot.lock_odometry.release()
-        robot.setSpeed(0,0)
-        
-        # arco dch
-        time.sleep(2)
-        robot.setSpeed(0.1,-0.25)
+        robot.setSpeed(0,-0.25)
         th = 0
         while th > -math.pi / 2:
                 robot.lock_odometry.acquire()
                 th = robot.th.value
                 print(th)
                 robot.lock_odometry.release()
+                time.sleep(dl)
         robot.setSpeed(0,0)
-        
+        #wait_th(robot, -math.pi / 4)
+               
         # arco izq
+        time.sleep(2)
         robot.setSpeed(0.1,0.25)
-        th = 0
-        while th > -math.pi / 4:
+        while th < math.pi / 2:
                 robot.lock_odometry.acquire()
                 th = robot.th.value
                 print(th)
                 robot.lock_odometry.release()
+                time.sleep(dl)
+        robot.setSpeed(0,0)
+        
+        # arco dch
+        time.sleep(2)
+        robot.setSpeed(0.1,-0.25)
+        while th > -math.pi / 2:
+                robot.lock_odometry.acquire()
+                th = robot.th.value
+                print(th)
+                robot.lock_odometry.release()
+                time.sleep(dl)
+        robot.setSpeed(0,0)
+        
+        # arco dch
+        time.sleep(2)
+        robot.setSpeed(0.1,-0.25)
+        while th > math.pi / 2 or th < 0:
+                robot.lock_odometry.acquire()
+                th = robot.th.value
+                print(th)
+                robot.lock_odometry.release()
+                time.sleep(dl)
+        robot.setSpeed(0,0)
+        
+        # arco izq
+        time.sleep(2)
+        robot.setSpeed(0.1,0.25)
+        while th < -math.pi / 2 or th > 0:
+                robot.lock_odometry.acquire()
+                th = robot.th.value
+                print(th)
+                robot.lock_odometry.release()
+                time.sleep(dl)
         robot.setSpeed(0,0)
 
 
