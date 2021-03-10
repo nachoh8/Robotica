@@ -2,7 +2,13 @@ import numpy as np
 import math
 
 # Simula movimiento del robot con vc=[v,w] en T seg. desde xWR
-def simubot(vc,xWR,T):
+def simubot(vc: list, xWR: np.array, T: float) -> np.array:
+  """
+  Simulate robot movement -> returns new position
+  - vc: Speed [v m/s, w rad/s]
+  - xWR: Inital Position
+  - T: time in seconds
+  """
   if vc[1]==0:   # w=0
       xRk=np.array([vc[0]*T, 0, 0])
   else:

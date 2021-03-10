@@ -10,7 +10,7 @@ BIG_SIZE = 'b'
 def dibrobot(loc_eje: list, c: str, tamano: str):
   """
   Plot robot on location loc_eje
-  - loc_eje: Location (x, y, th)
+  - loc_eje: Location [x (m), y (m), th (rads)]
   - c: Color of plot ('r': red, 'b': blue, ...)
   - tamano: Size of plot ('p': small, othet: big)
   """
@@ -61,4 +61,8 @@ def plot_log_file(file_name: str, color: str, size: str):
         dibrobot([float(line[0]), float(line[1]), float(line[2])], color, size)  
       n_line += 1
 
+  plot_show()
+
+def plot_show():
   plt.show()
+  
