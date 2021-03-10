@@ -1,6 +1,7 @@
-#from lib.Robot import Robot
+from lib.Robot import Robot
 import time
 import numpy as np
+import math
 import lib.plot as plot
 from lib.utils import simubot
 
@@ -17,8 +18,11 @@ def main():
     """
 
     # plot.plot_log_file("test_plot.csv", plot.COLOR_RED, plot.SMALL_SIZE)
-    
-
+    robot = Robot()
+    robot.startOdometry()
+    robot.go_to(0,-0.25,0,0,-np.pi/2, 0.015)
+    robot.stopOdometry()
+    return
     xWR = np.array([0,0,0])
     T = 0.03
 

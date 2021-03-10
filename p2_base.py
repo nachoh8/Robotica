@@ -6,6 +6,29 @@ import time
 from lib.Robot import Robot
 import math
 
+def trayectoria1(robot: Robot, error: float):
+        robot.go_to(0, -0.25, 0, 0, -np.pi/2, error) # 90º to right
+        robot.go_to(0.1, 0.25, 0, 0, np.pi/2, error)
+        robot.go_to(0.1, -0.25, 0, 0, -np.pi/2, error)
+        robot.go_to(0.1, -0.25, 0, 0, np.pi/2, error)
+        robot.go_to(0.1, 0.25, 0, 0, -np.pi/2, error)
+
+def trayectoria2(robot: Robot, error: float):
+        robot.go_to(0, 0.25, 0, 0, np.pi/2, error) # 90º to left
+        robot.go_to(0.1, -0.5, 0, 0, np.pi/12 , error) # gira un poco 
+        robot.setSpeed(0.25,0)
+        time.sleep(4.4) # 1,1 m
+        robot.setSpeed(0,0)
+        robot.go_to(0.1, -0.25, 0, 0, 15*np.pi/16, 0.02)
+        #robot.setSpeed(0.1,-0.25)
+        #time.sleep(3)
+        #return
+        robot.setSpeed(0.25,0)
+        time.sleep(4.4) # 1,1 m
+        robot.setSpeed(0,0)
+        robot.go_to(0.1, -0.5, 0, 0, np.pi/2 , error) # gira un poco 
+        
+        
 
 def main(args):
     try:
@@ -24,48 +47,54 @@ def main(args):
 
         # 2. perform trajectory
 
+        # PART 1:
+        
+        
+        error = 0.015
+        trayectoria2(robot, error)
+        
+
+        """
         x = 0
         y = 0
         th = 0
-
-        # PART 1:
-        
         # 90º dch
         robot.setSpeed(0,-0.25)
 
         while th > -math.pi / 2:
                 x,y,th = robot.wait_pos()
         
-        robot.setSpeed(0,0)
-        #wait_th(robot, -math.pi / 4)
+        #robot.setSpeed(0,0)
+        
                
         # arco izq
-        time.sleep(2)
+        #time.sleep(2)
         robot.setSpeed(0.1,0.25)
         while th < math.pi / 2:
                 x,y,th = robot.wait_pos()
-        robot.setSpeed(0,0)
+        #robot.setSpeed(0,0)
         
         # arco dch
-        time.sleep(2)
+        #time.sleep(2)
         robot.setSpeed(0.1,-0.25)
         while th > -math.pi / 2:
                 x,y,th = robot.wait_pos()
-        robot.setSpeed(0,0)
+        #robot.setSpeed(0,0)
         
         # arco dch
-        time.sleep(2)
+        #time.sleep(2)
         robot.setSpeed(0.1,-0.25)
         while th > math.pi / 2 or th < 0:
                 x,y,th = robot.wait_pos()
-        robot.setSpeed(0,0)
+        #robot.setSpeed(0,0)
         
         # arco izq
-        time.sleep(2)
+        #time.sleep(2)
         robot.setSpeed(0.1,0.25)
         while th < -math.pi / 2 or th > 0:
                 x,y,th = robot.wait_pos()
-        robot.setSpeed(0,0)
+        """
+        #robot.setSpeed(0,0)
 
 
         # PART 2:

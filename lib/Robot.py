@@ -25,7 +25,7 @@ from multiprocessing import Process, Value, Array, Lock
 
 
 class Robot:
-    def __init__(self, init_position=[0.0, 0.0, 0.0], log_file_name="log_odom.txt"):
+    def __init__(self, init_position=[0.0, 0.0, 0.0], log_file_name="log_odom.csv"):
         """
         Initialize basic robot params. \
 
@@ -33,7 +33,7 @@ class Robot:
         """
 
         # Robot construction parameters
-        self.radio_rueda = 0.0275
+        self.radio_rueda = 0.028
         self.long_ruedas = 0.115
         self.BP = BP
         self.PORT_LEFT_WHEEL = BP.PORT_C
@@ -70,7 +70,7 @@ class Robot:
         self.lock_odometry = Lock()
 
         self.P = 0.03 # odometry update period
-        self.P_CHECK_POS = 0.1 # chech position period
+        self.P_CHECK_POS = 0.03 # chech position period
         
         # lectura previa en radianes
         self.rdMotorR_prev = 0
@@ -79,7 +79,7 @@ class Robot:
         # 
         self.encoder_timer = 0
         
-        self.log_file = open(log_file_name, "w+")
+        self.log_file_name = log_file_name
 
     def resetMotors(self):
         """Reset encoders PORT_RIGHT_WHEEL, PORT_LEFT_WHEEL and PORT_GRIPPER"""
@@ -101,7 +101,7 @@ class Robot:
         #print(str(wMotorR) + " " + str(wMotorL))
 
         self.BP.set_motor_dps(self.PORT_RIGHT_WHEEL, math.degrees(wMotorR))
-        self.BP.set_motor_dps(self.PORT_LEFT_WHEEL, math.degrees(wMotorL) * 0.99)
+        self.BP.set_motor_dps(self.PORT_LEFT_WHEEL, math.degrees(wMotorL))
         
         # update debug velocity
         if debug:
@@ -165,7 +165,6 @@ class Robot:
 
     def startOdometry(self):
         """ This starts a new process/thread that will be updating the odometry periodically """
-
         self.finished.value = False
         self.p = Process(target=self.updateOdometry, args=())
         self.p.start()
@@ -173,7 +172,8 @@ class Robot:
 
     def updateOdometry(self):
         """ Updae the odomery every self.P seconds  """
-
+        log_file = open(self.log_file_name, "w+")
+        log_file.write("x,y,th\n")
         t_count = 0
         while not self.finished.value:
             # current processor time in a floating point value, in seconds
@@ -211,7 +211,7 @@ class Robot:
                 # (what we want to store).
                 if t_count == 10:
                     t_count = 0
-                    self.log_file.write("x: " + str(x) + " y: " + str(y) + " th: " + str(th_f) + "\n")
+                    log_file.write(str(x) + "," + str(y) + "," + str(th_f) + "\n")
                 #sys.stdout.write("Reading encoder values .... \n")
                 #[encoder1, encoder2] = [self.BP.get_motor_encoder(self.BP.PORT_B),
                 #    self.BP.get_motor_encoder(self.BP.PORT_C)]
@@ -231,7 +231,8 @@ class Robot:
 
             tEnd = time.clock()
             time.sleep(self.P - (tEnd-tIni))
-
+        
+        log_file.close()
         #print("Stopping odometry ... X= %d" %(self.x.value))
         sys.stdout.write("Stopping odometry ... X=  %.2f, \
                 Y=  %.2f, th=  %.2f \n" %(self.x.value, self.y.value, self.th.value))
@@ -244,8 +245,25 @@ class Robot:
         self.finished.value = True
         self.setSpeed(0,0)
         self.BP.reset_all()
-        self.log_file.close()
-
+    
+    def go_to(self, v:float, w:float, x_f: float, y_f:float, th_f: float, error_margin: float):
+        x, y, th = self.readOdometry()
+        self.setSpeed(v,w)
+        th_f_down = norm_rad(th_f - error_margin)
+        th_f_up = norm_rad(th_f + error_margin)
+        
+        if th_f_down > 0 and th_f_up < 0 or th_f_down < 0 and th_f_up > 0:
+            while not (th > th_f_down or th < th_f_up):
+                time.sleep(self.P_CHECK_POS)
+                x,y,th = self.readOdometry()
+                print(str(x) + " | " + str(y) + " | " + str(th))
+        else:
+            while not (th > th_f_down and th < th_f_up):
+                time.sleep(self.P_CHECK_POS)
+                x,y,th = self.readOdometry()
+                print(str(x) + " | " + str(y) + " | " + str(th))
+        
+    
     def wait_pos(self) -> list:
         time.sleep(self.P_CHECK_POS)
         odom = self.readOdometry()

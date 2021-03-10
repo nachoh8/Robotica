@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import csv
+import sys
 
 COLOR_RED = 'r'
 SMALL_SIZE = 'p'
@@ -40,7 +41,7 @@ def dibrobot(loc_eje: list, c: str, tamano: str):
   robot=np.dot(Hwe,np.dot(Hec,np.transpose(extremos)))
   plt.plot(robot[0,:], robot[1,:], c)
 
-def plot_log_file(file_name: str, color: str, size: str):
+def plot_log_file(file_name: str, color: str, size: str, show=False):
   """
   Plot points of file_name and show plot at the end
   - file_name: csv file
@@ -56,7 +57,8 @@ def plot_log_file(file_name: str, color: str, size: str):
         print("Error in line " + str(n_line))
         return
       
-      print(line[0] + " | " + line[1] + " | "+  line[2])
+      if show: print(line[0] + " | " + line[1] + " | "+  line[2])
+      
       if n_line > 0:
         dibrobot([float(line[0]), float(line[1]), float(line[2])], color, size)  
       n_line += 1
@@ -65,4 +67,13 @@ def plot_log_file(file_name: str, color: str, size: str):
 
 def plot_show():
   plt.show()
+
+def main():
+  if len(sys.argv) != 2:
+    print("Error")
+    return
+  plot_log_file(sys.argv[1], COLOR_RED, SMALL_SIZE, True)
+
+if __name__ == "__main__":
+    main()
   
