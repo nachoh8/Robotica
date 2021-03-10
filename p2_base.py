@@ -3,14 +3,10 @@
 import argparse
 import numpy as np
 import time
-from Robot import *
+from lib.Robot import Robot
 import math
- 
 
-def wait_pos():
-        x, y, th = robot.readOdometry()
-        time.sleep(0.1)
-        
+
 def main(args):
     try:
         if args.radioD < 0:
@@ -28,20 +24,18 @@ def main(args):
 
         # 2. perform trajectory
 
-
-        # DUMMY CODE! delete when you have your own
+        x = 0
+        y = 0
+        th = 0
 
         # PART 1:
-        dl = 0.1
+        
         # 90º dch
         robot.setSpeed(0,-0.25)
-        th = 0
+
         while th > -math.pi / 2:
-                robot.lock_odometry.acquire()
-                th = robot.th.value
-                print(th)
-                robot.lock_odometry.release()
-                time.sleep(dl)
+                x,y,th = robot.wait_pos()
+        
         robot.setSpeed(0,0)
         #wait_th(robot, -math.pi / 4)
                
@@ -49,44 +43,28 @@ def main(args):
         time.sleep(2)
         robot.setSpeed(0.1,0.25)
         while th < math.pi / 2:
-                robot.lock_odometry.acquire()
-                th = robot.th.value
-                print(th)
-                robot.lock_odometry.release()
-                time.sleep(dl)
+                x,y,th = robot.wait_pos()
         robot.setSpeed(0,0)
         
         # arco dch
         time.sleep(2)
         robot.setSpeed(0.1,-0.25)
         while th > -math.pi / 2:
-                robot.lock_odometry.acquire()
-                th = robot.th.value
-                print(th)
-                robot.lock_odometry.release()
-                time.sleep(dl)
+                x,y,th = robot.wait_pos()
         robot.setSpeed(0,0)
         
         # arco dch
         time.sleep(2)
         robot.setSpeed(0.1,-0.25)
         while th > math.pi / 2 or th < 0:
-                robot.lock_odometry.acquire()
-                th = robot.th.value
-                print(th)
-                robot.lock_odometry.release()
-                time.sleep(dl)
+                x,y,th = robot.wait_pos()
         robot.setSpeed(0,0)
         
         # arco izq
         time.sleep(2)
         robot.setSpeed(0.1,0.25)
         while th < -math.pi / 2 or th > 0:
-                robot.lock_odometry.acquire()
-                th = robot.th.value
-                print(th)
-                robot.lock_odometry.release()
-                time.sleep(dl)
+                x,y,th = robot.wait_pos()
         robot.setSpeed(0,0)
 
 
