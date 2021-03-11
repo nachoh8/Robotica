@@ -33,8 +33,8 @@ class Robot:
         """
 
         # Robot construction parameters
-        self.radio_rueda = 0.028
-        self.long_ruedas = 0.115
+        self.radio_rueda = 0.028 # m
+        self.long_ruedas = 0.115 # m
         self.BP = BP
         self.PORT_LEFT_WHEEL = BP.PORT_C
         self.PORT_RIGHT_WHEEL = BP.PORT_B
@@ -58,9 +58,9 @@ class Robot:
         self.resetMotors()
         ##################################################
         # odometry shared memory values
-        self.x = Value('d',0.0)
-        self.y = Value('d',0.0)
-        self.th = Value('d',0.0)
+        self.x = Value('d',init_position[0])
+        self.y = Value('d',init_position[1])
+        self.th = Value('d',init_position[2])
         self.finished = Value('b',1) # boolean to show if odometry updates are finished
         
         self.v = Value('d',0.0) # esto solo sirve para el modo debug
@@ -77,7 +77,7 @@ class Robot:
         self.rdMotorL_prev = 0
         
         # 
-        self.encoder_timer = 0
+        # self.encoder_timer = 0
         
         self.log_file_name = log_file_name
 
@@ -113,6 +113,7 @@ class Robot:
     def readSpeed(self) -> list:
         """
         Returns current speed: [v(m/s), w(rad/s)]
+        Auxialiar function of updateOdometry()
         """
 
         self.lock_odometry.acquire()	
@@ -128,14 +129,14 @@ class Robot:
             rdMotorL = math.radians(grMotorL)
     
             # Tiempo transcurrido entre lecturas
-            self.t_prev = self.encoder_timer
-            self.encoder_timer = time.time()
+            #self.t_prev = self.encoder_timer
+            #self.encoder_timer = time.time()
             
-            t = self.encoder_timer - self.t_prev
+            #t = self.encoder_timer - self.t_prev
             
             # Calculo velocidades angulares en cada motor
-            wMotorR = (rdMotorR - self.rdMotorR_prev) / t
-            wMotorL = (rdMotorL - self.rdMotorL_prev) / t
+            wMotorR = (rdMotorR - self.rdMotorR_prev) / self.P
+            wMotorL = (rdMotorL - self.rdMotorL_prev) / self.P
               
             # Calculo velocidades actuales
             v_w = np.array([[self.radio_rueda / 2, self.radio_rueda / 2],
@@ -180,9 +181,7 @@ class Robot:
             tIni = time.clock()
 
             # compute updates
-            x = self.x.value
-            y = self.y.value
-            th = self.th.value
+            x,y,th = self.readOdometry()
             
             v,w = self.readSpeed()
 
@@ -207,33 +206,18 @@ class Robot:
             
             t_count += 1
             try:
-                # Each of the following BP.get_motor_encoder functions returns the encoder value
-                # (what we want to store).
-                if t_count == 10:
+                if t_count == 10: # writes every 0,3 seconds
                     t_count = 0
                     log_file.write(str(x) + "," + str(y) + "," + str(th_f) + "\n")
-                #sys.stdout.write("Reading encoder values .... \n")
-                #[encoder1, encoder2] = [self.BP.get_motor_encoder(self.BP.PORT_B),
-                #    self.BP.get_motor_encoder(self.BP.PORT_C)]
             except IOError as error:
                 #print(error)
                 sys.stdout.write(error)
-
-            #sys.stdout.write("Encoder (%s) increased (in degrees) B: %6d  C: %6d " %
-            #        (type(encoder1), encoder1, encoder2))
-
-
-            # save LOG
-            # Need to decide when to store a log with the updated odometry ...
-
-            ######## UPDATE UNTIL HERE with your code ########
 
 
             tEnd = time.clock()
             time.sleep(self.P - (tEnd-tIni))
         
         log_file.close()
-        #print("Stopping odometry ... X= %d" %(self.x.value))
         sys.stdout.write("Stopping odometry ... X=  %.2f, \
                 Y=  %.2f, th=  %.2f \n" %(self.x.value, self.y.value, self.th.value))
                 
@@ -247,6 +231,14 @@ class Robot:
         self.BP.reset_all()
     
     def go_to(self, v:float, w:float, x_f: float, y_f:float, th_f: float, error_margin: float):
+        """
+        Move to [x_f,y_f,th_f] position with speed [v,w]
+        - v: Linear Speed m/s
+        - w: Angular Speed rad/s
+        - x_f: X Position in m
+        - y_f: Y Position in m
+        - th_f: Angle in rad
+        """
         x, y, th = self.readOdometry()
         self.setSpeed(v,w)
         th_f_down = norm_rad(th_f - error_margin)
@@ -263,9 +255,3 @@ class Robot:
                 x,y,th = self.readOdometry()
                 print(str(x) + " | " + str(y) + " | " + str(th))
         
-    
-    def wait_pos(self) -> list:
-        time.sleep(self.P_CHECK_POS)
-        odom = self.readOdometry()
-        print(odom)
-        return odom
