@@ -6,6 +6,9 @@ from __future__ import division       #                           ''
 import time     # import the time library for the sleep function
 import sys
 import math
+import cv2
+import picamera
+from picamera.array import PiRGBArray
 
 import numpy as np
 
@@ -86,7 +89,7 @@ class Robot:
 
         self.BP.offset_motor_encoder(self.PORT_RIGHT_WHEEL, self.BP.get_motor_encoder(self.PORT_RIGHT_WHEEL))
         self.BP.offset_motor_encoder(self.PORT_LEFT_WHEEL, self.BP.get_motor_encoder(self.PORT_LEFT_WHEEL))
-        # self.BP.offset_motor_encoder(self.PORT_GRIPPER, self.BP.get_motor_encoder(self.PORT_GRIPPER))
+        self.BP.offset_motor_encoder(self.PORT_GRIPPER, self.BP.get_motor_encoder(self.PORT_GRIPPER))
 
     def setSpeed(self, v: float, w: float):
         """
@@ -254,4 +257,125 @@ class Robot:
                 time.sleep(self.P_CHECK_POS)
                 x,y,th = self.readOdometry()
                 print(str(x) + " | " + str(y) + " | " + str(th))
+                
+    def catch (self, up:bool):
+        v = 95
+        if up:
+            self.BP.set_motor_dps(self.PORT_GRIPPER, -v)
+            time.sleep(1)
+            self.BP.set_motor_dps(self.PORT_GRIPPER, 0)
+        else:
+            self.BP.set_motor_dps(self.PORT_GRIPPER, v)
+            time.sleep(1)
+            self.BP.set_motor_dps(self.PORT_GRIPPER, 0)
+        
+    def camera(self, colorRangeMin:tuple, colorRangeMax:tuple):
+        cam = picamera.PiCamera()
+
+        cam.resolution = (320, 240)
+        cam.framerate = 32
+        rawCapture = PiRGBArray(cam, size=(320, 240))
+         
+        # allow the camera to warmup
+        time.sleep(0.1)
+
+        for img in cam.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+
+            frame = img.array
+            # cv2.imshow('Captura', frame)
+            self.get_blobs(frame, colorRangeMin, colorRangeMax)
+            
+            # clear the stream in preparation for the next frame
+            rawCapture.truncate(0)
+             
+            k = cv2.waitKey(1) & 0xff
+            if k == 27: # ESC
+                cam.close()
+                break
+            
+            time.sleep(1)
+
+        cv2.destroyAllWindows()
+        
+    def  get_blobs(self, frame, colorRangeMin:tuple, colorRangeMax:tuple):
+        # Read image
+        img_BGR = frame
+
+        # Setup default values for SimpleBlobDetector parameters.
+        params = cv2.SimpleBlobDetector_Params()
+
+        # These are just examples, tune your own if needed
+        # Change thresholds
+        params.minThreshold = 10
+        params.maxThreshold = 200
+
+        # Filter by Area
+        params.filterByArea = True
+        params.minArea = 200
+        params.maxArea = 10000
+
+        # Filter by Circularity
+        params.filterByCircularity = True
+        params.minCircularity = 0.1
+
+        # Filter by Color
+        params.filterByColor = False
+        # not directly color, but intensity on the channel input
+        #params.blobColor = 0
+        params.filterByConvexity = False
+        params.filterByInertia = False
+
+
+        # Create a detector with the parameters
+        ver = (cv2.__version__).split('.')
+        if int(ver[0]) < 3 :
+            detector = cv2.SimpleBlobDetector(params)
+        else :
+            detector = cv2.SimpleBlobDetector_create(params)
+
+        # keypoints on original image (will look for blobs in grayscale)
+        keypoints = detector.detect(img_BGR)
+        # Draw detected blobs as red circles.
+        # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures
+        # the size of the circle corresponds to the size of blob
+        im_with_keypoints = cv2.drawKeypoints(img_BGR, keypoints, np.array([]), (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+
+        # Show blobs
+        cv2.imshow("Keypoints on Gray Scale", im_with_keypoints)
+
+        # filter certain COLOR channels
+
+        # Pixels with 100 <= R <= 255, 15 <= B <= 56, 17 <= G <= 50 will be considered red.
+        # similar for BLUE
+
+
+        mask_red=cv2.inRange(img_BGR, colorRangeMin, colorRangeMax)
+
+
+        # apply the mask
+        red = cv2.bitwise_and(img_BGR, img_BGR, mask = mask_red)
+        # show resulting filtered image next to the original one
+        cv2.imshow("Red regions", np.hstack([img_BGR, red]))
+
+
+        # detector finds "dark" blobs by default, so invert image for results with same detector
+        keypoints_red = detector.detect(255-mask_red)
+        print(keypoints_red)
+
+        # Draw detected blobs as red circles.
+        # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures
+        # the size of the circle corresponds to the size of blob
+        im_with_keypoints = cv2.drawKeypoints(img_BGR, keypoints_red, np.array([]),
+            (255,255,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+
+        # Show mask and blobs found
+        cv2.imshow("Keypoints on RED", im_with_keypoints)
+        
+        """for kp in keypoints_red:
+            print(kp.pt[0], kp.pt[1], kp.size)
+        cv2.waitKey(0)"""
+        
+    def trackObject(self, colorRangeMin:tuple, colorRangeMax:tuple):
+        self.p_camera = Process(target=self.camera, args=(colorRangeMin, colorRangeMax))
+        self.p_camera.start()
         
