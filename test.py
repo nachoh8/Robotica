@@ -8,7 +8,7 @@ from lib.utils import simubot
 def main():
     
     robot = Robot()
-    robot.trackObject((10,10,100),(50,50,255))
+    robot.setSpeed(0,0)
 
         
 

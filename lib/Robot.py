@@ -69,8 +69,14 @@ class Robot:
         self.v = Value('d',0.0) # esto solo sirve para el modo debug
         self.w = Value('d',0.0)
         
+        # blob shared memory values
+        self.x_blob = Value('d',0.0)
+        self.y_blob = Value('d',0.0)
+        self.size_blob = Value('d',0.0)
+        
         # if we want to block several instructions to be run together, we may want to use an explicit Lock
         self.lock_odometry = Lock()
+        self.lock_camera = Lock()
 
         self.P = 0.03 # odometry update period
         self.P_CHECK_POS = 0.03 # chech position period
@@ -283,7 +289,10 @@ class Robot:
 
             frame = img.array
             # cv2.imshow('Captura', frame)
-            self.get_blobs(frame, colorRangeMin, colorRangeMax)
+            x, y, size = self.get_blobs(frame, colorRangeMin, colorRangeMax)
+            self.lock_camera.acquire()
+            self.x_blob.value, self.y_blob.value, self.size_blob.value = x, y, size
+            self.lock_camera.release()
             
             # clear the stream in preparation for the next frame
             rawCapture.truncate(0)
@@ -341,7 +350,7 @@ class Robot:
         im_with_keypoints = cv2.drawKeypoints(img_BGR, keypoints, np.array([]), (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
         # Show blobs
-        cv2.imshow("Keypoints on Gray Scale", im_with_keypoints)
+        #cv2.imshow("Keypoints on Gray Scale", im_with_keypoints)
 
         # filter certain COLOR channels
 
@@ -355,12 +364,11 @@ class Robot:
         # apply the mask
         red = cv2.bitwise_and(img_BGR, img_BGR, mask = mask_red)
         # show resulting filtered image next to the original one
-        cv2.imshow("Red regions", np.hstack([img_BGR, red]))
+        #cv2.imshow("Red regions", np.hstack([img_BGR, red]))
 
 
         # detector finds "dark" blobs by default, so invert image for results with same detector
         keypoints_red = detector.detect(255-mask_red)
-        print(keypoints_red)
 
         # Draw detected blobs as red circles.
         # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures
@@ -371,11 +379,80 @@ class Robot:
         # Show mask and blobs found
         cv2.imshow("Keypoints on RED", im_with_keypoints)
         
-        """for kp in keypoints_red:
-            print(kp.pt[0], kp.pt[1], kp.size)
-        cv2.waitKey(0)"""
+        kx, ky, ksize = -1, -1, -1
+        for k in keypoints_red:
+            if ksize < k.size:
+                kx = k.pt[0]
+                ky = k.pt[1]
+                ksize = k.size
+        return kx, ky, ksize
+    
+    def getBlob(self):
+        self.lock_camera.acquire()
+        x, y, s = self.x_blob.value, self.y_blob.value, self.size_blob.value
+        self.lock_camera.release()
+        print (x, y, s)
+        
+        return x, y, s
+        
+    def orientate(self, x):
+        d = abs(160 - x)
+        if x < 160: # image_x_size = 320
+            w = 1
+        else:
+            w = -1
+        
+        if d < 20: 
+            w = 0
+        elif d < 80:
+            w = w * 0.1
+        else:
+            w = w * 0.2
+            
+        return w
+        
+    def calculate_speed(self, x, size):
+        a = size - 110
+        if a > 0 or size == -1: v = 0
+        elif a > -30: v = 0.05
+        else: v = 0.15
+        
+        w = self.orientate(x) # corrección error
+        return v, w
+        
         
     def trackObject(self, colorRangeMin:tuple, colorRangeMax:tuple):
         self.p_camera = Process(target=self.camera, args=(colorRangeMin, colorRangeMax))
         self.p_camera.start()
+        
+        while not self.finished.value:
+            x, y, size = self.getBlob()
+            """
+            # buscar blob a su alrededor
+            if size == -1: self.setSpeed(0,0.3)
+            while size == -1:
+                time.sleep(0.1)
+                x, y, size = self.getBlob()
+            self.setSpeed(0,0)"""
+            
+            # buscar y orientar a blob
+            w = 1
+            while w != 0:
+                x, y, size = self.getBlob()
+                w = self.orientate(x)
+                self.setSpeed(0, w)
+            
+            # avanzar hacia objetivo
+            v = 1
+            w = 1
+            while v != 0 and w != 0:
+                x, y, size = self.getBlob()
+                v, w = self.calculate_speed(x, size)
+                self.setSpeed(v, w)
+                time.sleep(0.1)
+            
+            #self.setSpeed(0,0)
+            if size >= 110: 
+                self.catch()
+                break                         
         

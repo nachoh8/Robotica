@@ -4,13 +4,10 @@ import argparse
 import cv2
 import numpy as np
 import time
-from Robot import Robot
+from lib.Robot import Robot
 
 def main(args):
     try:
-        if args.radioD < 0:
-            print 'd must be a positive value'
-            exit(1)
 
         # Initialize Odometry. Default value will be 0,0,0
         robot = Robot() 
@@ -27,6 +24,7 @@ def main(args):
 
         # if res:
         #   robot.catch
+        robot.trackObject((10,10,100),(50,50,255))
 
         # 3. wrap up and close stuff ...
         # This currently unconfigure the sensors, disable the motors, 
