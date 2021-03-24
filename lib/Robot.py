@@ -70,9 +70,9 @@ class Robot:
         self.w = Value('d',0.0)
         
         # blob shared memory values
-        self.x_blob = Value('d',0.0)
-        self.y_blob = Value('d',0.0)
-        self.size_blob = Value('d',0.0)
+        self.x_blob = Value('d',-1)
+        self.y_blob = Value('d',-1)
+        self.size_blob = Value('d',-1)
         
         # if we want to block several instructions to be run together, we may want to use an explicit Lock
         self.lock_odometry = Lock()
@@ -275,7 +275,7 @@ class Robot:
             time.sleep(1)
             self.BP.set_motor_dps(self.PORT_GRIPPER, 0)
         
-    def camera(self, colorRangeMin:tuple, colorRangeMax:tuple):
+    def camera(self, colorRangeMin0:tuple, colorRangeMax0:tuple, colorRangeMin1:tuple, colorRangeMax1:tuple):
         cam = picamera.PiCamera()
 
         cam.resolution = (320, 240)
@@ -283,17 +283,18 @@ class Robot:
         rawCapture = PiRGBArray(cam, size=(320, 240))
          
         # allow the camera to warmup
-        time.sleep(0.1)
+        time.sleep(0.5)
 
         for img in cam.capture_continuous(rawCapture, format="bgr", use_video_port=True):
 
             frame = img.array
             # cv2.imshow('Captura', frame)
-            x, y, size = self.get_blobs(frame, colorRangeMin, colorRangeMax)
+            x, y, size = self.get_blobs(frame, colorRangeMin0, colorRangeMax0, colorRangeMin1, colorRangeMax1)
             self.lock_camera.acquire()
             self.x_blob.value, self.y_blob.value, self.size_blob.value = x, y, size
             self.lock_camera.release()
             
+            cv2.imshow("Camera", frame)
             # clear the stream in preparation for the next frame
             rawCapture.truncate(0)
              
@@ -301,91 +302,85 @@ class Robot:
             if k == 27: # ESC
                 cam.close()
                 break
-            
-            time.sleep(1)
 
         cv2.destroyAllWindows()
         
-    def  get_blobs(self, frame, colorRangeMin:tuple, colorRangeMax:tuple):
-        # Read image
-        img_BGR = frame
+    def get_blobs (self, frame, hsvMin0, hsvMax0, hsvMin1, hsvMax1):
+        # Font to write text overlay
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        b = cv2.GaussianBlur(frame, (11, 11), 0)
+        hsv = cv2.cvtColor(b, cv2.COLOR_BGR2HSV)
 
-        # Setup default values for SimpleBlobDetector parameters.
+        # Apply HSV thresholds 
+        mask0 = cv2.inRange(hsv, hsvMin0, hsvMax0)
+
+        mask1 = cv2.inRange(hsv, hsvMin1, hsvMax1)
+
+        mask = cv2.bitwise_or(mask1, mask0)
+        #mask = cv2.inRange(hsv, hsvMin, hsvMax)
+
+        # Erode and dilate
+        mask = cv2.erode(mask, None, iterations=3)
+        mask = cv2.dilate(mask, None, iterations=3)
+
+        # Adjust detection parameters
         params = cv2.SimpleBlobDetector_Params()
-
-        # These are just examples, tune your own if needed
+         
         # Change thresholds
-        params.minThreshold = 10
-        params.maxThreshold = 200
-
-        # Filter by Area
-        params.filterByArea = True
-        params.minArea = 200
-        params.maxArea = 10000
-
+        params.minThreshold = 0;
+        params.maxThreshold = 100;
+         
+        # Filter by Area.
+        params.filterByArea = False
+        params.minArea = 50
+        params.maxArea = 50000
+         
         # Filter by Circularity
-        params.filterByCircularity = True
-        params.minCircularity = 0.1
-
-        # Filter by Color
-        params.filterByColor = False
-        # not directly color, but intensity on the channel input
-        #params.blobColor = 0
+        params.filterByCircularity = False
+        params.minCircularity = 0.01
+         
+        # Filter by Convexity
         params.filterByConvexity = False
+        params.minConvexity = 0.5
+         
+        # Filter by Inertia
         params.filterByInertia = False
+        params.minInertiaRatio = 0.5
 
+        # Detect blobs
+        detector = cv2.SimpleBlobDetector_create(params)
 
-        # Create a detector with the parameters
-        ver = (cv2.__version__).split('.')
-        if int(ver[0]) < 3 :
-            detector = cv2.SimpleBlobDetector(params)
-        else :
-            detector = cv2.SimpleBlobDetector_create(params)
+        # Invert the mask
+        reversemask = 255-mask
 
-        # keypoints on original image (will look for blobs in grayscale)
-        keypoints = detector.detect(img_BGR)
-        # Draw detected blobs as red circles.
-        # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures
-        # the size of the circle corresponds to the size of blob
-        im_with_keypoints = cv2.drawKeypoints(img_BGR, keypoints, np.array([]), (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        # Run blob detection
+        keypoints = detector.detect(reversemask)
 
-        # Show blobs
-        #cv2.imshow("Keypoints on Gray Scale", im_with_keypoints)
+        # Get the number of blobs found
+        blobCount = len(keypoints)
 
-        # filter certain COLOR channels
-
-        # Pixels with 100 <= R <= 255, 15 <= B <= 56, 17 <= G <= 50 will be considered red.
-        # similar for BLUE
-
-
-        mask_red=cv2.inRange(img_BGR, colorRangeMin, colorRangeMax)
-
-
-        # apply the mask
-        red = cv2.bitwise_and(img_BGR, img_BGR, mask = mask_red)
-        # show resulting filtered image next to the original one
-        #cv2.imshow("Red regions", np.hstack([img_BGR, red]))
-
-
-        # detector finds "dark" blobs by default, so invert image for results with same detector
-        keypoints_red = detector.detect(255-mask_red)
-
-        # Draw detected blobs as red circles.
-        # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures
-        # the size of the circle corresponds to the size of blob
-        im_with_keypoints = cv2.drawKeypoints(img_BGR, keypoints_red, np.array([]),
-            (255,255,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-
-        # Show mask and blobs found
-        cv2.imshow("Keypoints on RED", im_with_keypoints)
+        # Write the number of blobs found
+        text = "Count=" + str(blobCount) 
+        cv2.putText(frame, text, (5,25), font, 1, (0, 255, 0), 2)
         
         kx, ky, ksize = -1, -1, -1
-        for k in keypoints_red:
+        for k in keypoints:
             if ksize < k.size:
                 kx = k.pt[0]
                 ky = k.pt[1]
                 ksize = k.size
+        
+        text2 = "X=" + "{:.2f}".format(kx )
+        cv2.putText(frame, text2, (5,50), font, 1, (0, 255, 0), 2)
+        text3 = "Y=" + "{:.2f}".format(ky)
+        cv2.putText(frame, text3, (5,75), font, 1, (0, 255, 0), 2)
+        text4 = "S=" + "{:.2f}".format(ksize)
+        cv2.putText(frame, text4, (5,100), font, 1, (0, 255, 0), 2)
+        
+        cv2.circle(frame, (int(kx),int(ky)), int(ksize / 2), (0, 255, 0), 2)
+        
         return kx, ky, ksize
+
     
     def getBlob(self):
         self.lock_camera.acquire()
@@ -405,14 +400,14 @@ class Robot:
         if d < 20: 
             w = 0
         elif d < 80:
-            w = w * 0.1
-        else:
             w = w * 0.2
+        else:
+            w = w * 0.5
             
         return w
         
     def calculate_speed(self, x, size):
-        a = size - 110
+        a = size - 90
         if a > 0 or size == -1: v = 0
         elif a > -30: v = 0.05
         else: v = 0.15
@@ -421,38 +416,42 @@ class Robot:
         return v, w
         
         
-    def trackObject(self, colorRangeMin:tuple, colorRangeMax:tuple):
-        self.p_camera = Process(target=self.camera, args=(colorRangeMin, colorRangeMax))
+    def trackObject(self, colorRangeMin0:tuple, colorRangeMax0:tuple, colorRangeMin1:tuple, colorRangeMax1:tuple):
+        self.p_camera = Process(target=self.camera, args=(colorRangeMin0, colorRangeMax0, colorRangeMin1, colorRangeMax1))
         self.p_camera.start()
         
         while not self.finished.value:
             x, y, size = self.getBlob()
-            """
-            # buscar blob a su alrededor
-            if size == -1: self.setSpeed(0,0.3)
-            while size == -1:
-                time.sleep(0.1)
-                x, y, size = self.getBlob()
-            self.setSpeed(0,0)"""
             
             # buscar y orientar a blob
-            w = 1
+            """w = 1
             while w != 0:
                 x, y, size = self.getBlob()
                 w = self.orientate(x)
-                self.setSpeed(0, w)
+                self.setSpeed(0, w)"""
+             
+            while size == -1:
+                x, y, size = self.getBlob()
+                self.setSpeed(0, 0.5)  
+                time.sleep(0.05)
             
             # avanzar hacia objetivo
             v = 1
             w = 1
-            while v != 0 and w != 0:
+            n = 0
+            while (v != 0 or w != 0) and n < 4:
                 x, y, size = self.getBlob()
+                if size == -1: n += 1
+                else: n = 0
                 v, w = self.calculate_speed(x, size)
                 self.setSpeed(v, w)
-                time.sleep(0.1)
+                time.sleep(0.05)
             
-            #self.setSpeed(0,0)
-            if size >= 110: 
-                self.catch()
+            self.setSpeed(0,0)
+            # coge el objetivo
+            if size >= 90:
+                self.setSpeed(0.05,0)
+                time.sleep(0.2)
+                self.catch(False)
                 break                         
         

@@ -24,7 +24,7 @@ def main(args):
 
         # if res:
         #   robot.catch
-        robot.trackObject((10,10,100),(50,50,255))
+        robot.trackObject((0,200,20),(5,255,200) , (170,200,20),(180,255,200))
 
         # 3. wrap up and close stuff ...
         # This currently unconfigure the sensors, disable the motors, 
