@@ -42,6 +42,8 @@ class Robot:
         self.PORT_LEFT_WHEEL = BP.PORT_C
         self.PORT_RIGHT_WHEEL = BP.PORT_B
         self.PORT_GRIPPER = BP.PORT_D
+        
+        # inicializar camara // TODO
 
         ##################################################
         # Motors and sensors setup
@@ -265,6 +267,10 @@ class Robot:
                 print(str(x) + " | " + str(y) + " | " + str(th))
                 
     def catch (self, up:bool):
+        """
+        Si up, entonces la cesta sube
+        Sino baja 
+        """
         v = 95
         if up:
             self.BP.set_motor_dps(self.PORT_GRIPPER, -v)
@@ -276,6 +282,9 @@ class Robot:
             self.BP.set_motor_dps(self.PORT_GRIPPER, 0)
         
     def camera(self, colorRangeMin0:tuple, colorRangeMax0:tuple, colorRangeMin1:tuple, colorRangeMax1:tuple):
+        """
+        Proceso independiente que ejecuta la cámara y procesa blobs
+        """
         cam = picamera.PiCamera()
 
         cam.resolution = (320, 240)
@@ -306,6 +315,10 @@ class Robot:
         cv2.destroyAllWindows()
         
     def get_blobs (self, frame, hsvMin0, hsvMax0, hsvMin1, hsvMax1):
+        """
+        Devuelve la posición y el tamaño del blob más grande encontrado
+        en frame a partir de los rangos HSV
+        """
         # Font to write text overlay
         font = cv2.FONT_HERSHEY_SIMPLEX
         b = cv2.GaussianBlur(frame, (11, 11), 0)
@@ -370,6 +383,7 @@ class Robot:
                 ky = k.pt[1]
                 ksize = k.size
         
+        # ponerlo opcional // TODO
         text2 = "X=" + "{:.2f}".format(kx )
         cv2.putText(frame, text2, (5,50), font, 1, (0, 255, 0), 2)
         text3 = "Y=" + "{:.2f}".format(ky)
@@ -383,6 +397,9 @@ class Robot:
 
     
     def getBlob(self):
+        """
+        Devuelve la posición y tamaño del último blob
+        """
         self.lock_camera.acquire()
         x, y, s = self.x_blob.value, self.y_blob.value, self.size_blob.value
         self.lock_camera.release()
@@ -391,6 +408,9 @@ class Robot:
         return x, y, s
         
     def orientate(self, x):
+        """
+        Ajusta la velocidad angular a partir de la posición x del blob
+        """
         d = abs(160 - x)
         if x < 160: # image_x_size = 320
             w = 1
@@ -407,6 +427,10 @@ class Robot:
         return w
         
     def calculate_speed(self, x, size):
+        """
+        Función escalón para ajustar la velocidad lineal y angular 
+        a partir del tamaño y posición del blob
+        """
         a = size - 90
         if a > 0 or size == -1: v = 0
         elif a > -30: v = 0.05
@@ -417,25 +441,25 @@ class Robot:
         
         
     def trackObject(self, colorRangeMin0:tuple, colorRangeMax0:tuple, colorRangeMin1:tuple, colorRangeMax1:tuple):
+        """
+        Busca y captura el objetivo (pelota roja) en tres pasos:
+        1. Gira sobre sí mismo hasta encontrar el primer blob
+        2. Avanza hacia el objetivo ajustando las velocidades lineal y angular con una función escalón
+        3. Captura el objetivo
+        """
         self.p_camera = Process(target=self.camera, args=(colorRangeMin0, colorRangeMax0, colorRangeMin1, colorRangeMax1))
         self.p_camera.start()
         
         while not self.finished.value:
             x, y, size = self.getBlob()
             
-            # buscar y orientar a blob
-            """w = 1
-            while w != 0:
-                x, y, size = self.getBlob()
-                w = self.orientate(x)
-                self.setSpeed(0, w)"""
-             
+            # 1. buscar y orientar a blob             
             while size == -1:
                 x, y, size = self.getBlob()
                 self.setSpeed(0, 0.5)  
                 time.sleep(0.05)
             
-            # avanzar hacia objetivo
+            # 3. avanzar hacia objetivo
             v = 1
             w = 1
             n = 0
@@ -448,10 +472,12 @@ class Robot:
                 time.sleep(0.05)
             
             self.setSpeed(0,0)
-            # coge el objetivo
+            # 3. coge el objetivo
             if size >= 90:
                 self.setSpeed(0.05,0)
                 time.sleep(0.2)
                 self.catch(False)
-                break                         
+                break  
+        
+        self.p_camera.terminate()
         

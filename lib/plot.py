@@ -66,6 +66,7 @@ def plot_log_file(file_name: str, color: str, size: str, show=False):
   plot_show()
 
 def plot_show():
+  plt.gca().set_aspect('equal', adjustable='box')
   plt.show()
 
 def main():
