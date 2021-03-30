@@ -266,14 +266,6 @@ class Robot:
                 x,y,th = self.readOdometry()
                 print(str(x) + " | " + str(y) + " | " + str(th))
                 
-    def rotate_90 (self, izq, error=0.015):
-        if izq: self.go_to(0, 0.25, 0, 0, np.pi/2, error)
-        else: self.go_to(0, -0.25, 0, 0, -np.pi/2, error)
-        
-    def go_forward(self, d, error=0.015):
-        self.go_to(0.1, 0, 0, 0, 0, error) # TODO: avanzar en función de la distancia X
-        
-                
     def catch (self, up:bool):
         """
         Si up, entonces la cesta sube
