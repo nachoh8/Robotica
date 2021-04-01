@@ -1,22 +1,11 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
 import argparse
-import os
+import cv2
 import numpy as np
 import time
-
-import matplotlib
-matplotlib.use("TkAgg")
-# sudo apt-get install tcl-dev tk-dev python-tk python3-tk if TkAgg is not available
-
-# from Robot import Robot
-from MapLib import Map2D
-
-# NOTES ABOUT TASKS to DO in P4:
-# 1)findPath(x1,y1, x2,y2),   fillCostMatrix(), replanPath () --> should be methods from the new Map2D class
-# 2) go(x,y) and detectObstacle() could be part of your Robot class (depending how you have implemented things)
-# 3) you can change these method signatures if you need, depending how you have implemented things
-
+from lib.Robot import Robot
+from lib.MapLib import Map2D
 
 def main(args):
     """
@@ -30,7 +19,7 @@ def main(args):
 
         map_file = args.mapfile;
         # Instantiate Odometry with your own files from P2/P3
-        # robot = Robot()
+        robot = Robot()
         # ...
 
         # 1. load map and compute costs and path
@@ -61,18 +50,19 @@ def main(args):
 
         matplotlib.pyplot.close('all')
         # 2. launch updateOdometry thread()
-        # robot.startOdometry()
+        robot.startOdometry()
         # ...
 
 
         # 3. perform trajectory
         # robot.setSpeed(1,1) ...
-        # while (notfinished){
+        while (notfinished):
 
-            # robot.go(pathX[i],pathY[i]);
+            robot.go(pathX[i],pathY[i]);
             # check if there are close obstacles
             # deal with them...
             # Avoid_obstacle(...) OR RePlanPath(...)
+        
 
 
 
@@ -98,3 +88,6 @@ if __name__ == "__main__":
                         default="mapa1.txt")
     args = parser.parse_args()
     main(args)
+
+
+

@@ -265,15 +265,71 @@ class Robot:
                 time.sleep(self.P_CHECK_POS)
                 x,y,th = self.readOdometry()
                 print(str(x) + " | " + str(y) + " | " + str(th))
-                
-    def rotate_90 (self, izq, error=0.015):
-        if izq: self.go_to(0, 0.25, 0, 0, np.pi/2, error)
-        else: self.go_to(0, -0.25, 0, 0, -np.pi/2, error)
         
-    def go_forward(self, d, error=0.015):
-        self.go_to(0.1, 0, 0, 0, 0, error) # TODO: avanzar en función de la distancia X
+    def quadrant (self, th):
+        if th >= 0 and th <= np.pi / 2: return 1
+        elif th > np.pi / 2 and th <= np.pi: return 2
+        elif th >= -np.pi and th < -np.pi / 2: return 3
+        else: return 4
         
+    def rotate_dir (self, th_i, th_f):
+        
+        q_i = self.quadrant(th_i)
+        q_f = self.quadrant(th_f)
+        df_q = q_i - q_f
+        
+        if abs(df_q) == 1 or abs(df_q) == 3: return df_q / abs(df_q)
+        elif abs(df_q) == 2: return -1
+        else:
+            df_th = th_f - th_i
+            if df_th == 0: return 0
+            return df_th / abs(df_th)  
+            
+    def rotate (self, th, th_f, w, error_margin=0.015):
+        th_f_down = norm_rad(th_f - error_margin)
+        th_f_up = norm_rad(th_f + error_margin)
+        
+        self.setSpeed(0,w)
+        
+        """if th_f_down > 0 and th_f_up < 0 or th_f_down < 0 and th_f_up > 0:
+            while not (th > th_f_down or th < th_f_up):
+                time.sleep(self.P_CHECK_POS)
+                x,y,th = self.readOdometry()
                 
+        else:
+            while not (th > th_f_down and th < th_f_up):
+                time.sleep(self.P_CHECK_POS)
+                x,y,th = self.readOdometry()
+        """
+        self.setSpeed(0,0)
+                
+    def go(self, x_goal, y_goal, error=0.015):
+           x,y,th = self.readOdometry()
+           
+           # Calcular th final para rotar
+           v = (x_goal - x, y_goal - y)
+           th_goal = np.arctan2(v[1], v[0])
+           th_goal = norm_rad(th_goal)
+           
+           # Rotar
+           w = 0.3 * self.rotate_dir(th, th_goal) 
+           self.rotate(th, th_goal, w)
+           
+           # Avanzar
+           x,y,th = self.readOdometry()
+           self.setSpeed(0.1,0)
+           
+           if abs(x_goal - x) > error: # en X
+               while abs(x_goal - x) > error:
+                   time.sleep(self.P_CHECK_POS)
+                   x,y,th = self.readOdometry()
+           else: # en Y
+               while abs(y_goal - y) > error:
+                   time.sleep(self.P_CHECK_POS)
+                   x,y,th = self.readOdometry()
+               
+           self.setSpeed(0,0)
+                               
     def catch (self, up:bool):
         """
         Si up, entonces la cesta sube
