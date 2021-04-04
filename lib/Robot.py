@@ -28,12 +28,14 @@ from multiprocessing import Process, Value, Array, Lock
 
 
 class Robot:
-    def __init__(self, init_position=[0.0, 0.0, 0.0], log_file_name="log_odom.csv"):
+    def __init__(self, init_position=[0.0, 0.0, 0.0], log_file_name="log_odom.csv", verbose=False):
         """
         Initialize basic robot params. \
 
         Initialize Motors and Sensors according to the set up in your robot
         """
+
+        self.verbose = verbose
 
         # Robot construction parameters
         self.radio_rueda = 0.028 # m
@@ -42,6 +44,7 @@ class Robot:
         self.PORT_LEFT_WHEEL = BP.PORT_C
         self.PORT_RIGHT_WHEEL = BP.PORT_B
         self.PORT_GRIPPER = BP.PORT_D
+        self.PORT_ULTRASONIC_SENSOR = BP.PORT_1
         
         # inicializar camara // TODO
 
@@ -138,12 +141,6 @@ class Robot:
             
             rdMotorR = math.radians(grMotorR)
             rdMotorL = math.radians(grMotorL)
-    
-            # Tiempo transcurrido entre lecturas
-            #self.t_prev = self.encoder_timer
-            #self.encoder_timer = time.time()
-            
-            #t = self.encoder_timer - self.t_prev
             
             # Calculo velocidades angulares en cada motor
             wMotorR = (rdMotorR - self.rdMotorR_prev) / self.P
@@ -153,6 +150,7 @@ class Robot:
             v_w = np.array([[self.radio_rueda / 2, self.radio_rueda / 2],
                             [self.radio_rueda / self.long_ruedas, -self.radio_rueda / self.long_ruedas]
                            ]).dot(np.array([wMotorR, wMotorL]))
+            
             # Actualizacion de variables
             self.rdMotorR_prev = rdMotorR
             self.rdMotorL_prev = rdMotorL
@@ -187,6 +185,7 @@ class Robot:
         log_file = open(self.log_file_name, "w+")
         log_file.write("x,y,th\n")
         t_count = 0
+
         while not self.finished.value:
             # current processor time in a floating point value, in seconds
             tIni = time.clock()
@@ -212,7 +211,7 @@ class Robot:
             self.x.value = x
             self.y.value = y
             self.th.value = th_f
-            #print(str(self.x.value) + " " + str(self.y.value) + " " + str(self.th.value) + " " + str(v) + " " + str(w))
+            
             self.lock_odometry.release()
             
             t_count += 1
@@ -404,8 +403,8 @@ class Robot:
         params = cv2.SimpleBlobDetector_Params()
          
         # Change thresholds
-        params.minThreshold = 0;
-        params.maxThreshold = 100;
+        params.minThreshold = 0
+        params.maxThreshold = 100
          
         # Filter by Area.
         params.filterByArea = False
@@ -435,10 +434,6 @@ class Robot:
 
         # Get the number of blobs found
         blobCount = len(keypoints)
-
-        # Write the number of blobs found
-        text = "Count=" + str(blobCount) 
-        cv2.putText(frame, text, (5,25), font, 1, (0, 255, 0), 2)
         
         kx, ky, ksize = -1, -1, -1
         for k in keypoints:
@@ -447,13 +442,15 @@ class Robot:
                 ky = k.pt[1]
                 ksize = k.size
         
-        # ponerlo opcional // TODO
-        text2 = "X=" + "{:.2f}".format(kx )
-        cv2.putText(frame, text2, (5,50), font, 1, (0, 255, 0), 2)
-        text3 = "Y=" + "{:.2f}".format(ky)
-        cv2.putText(frame, text3, (5,75), font, 1, (0, 255, 0), 2)
-        text4 = "S=" + "{:.2f}".format(ksize)
-        cv2.putText(frame, text4, (5,100), font, 1, (0, 255, 0), 2)
+        if self.verbose:
+            text = "Count=" + str(blobCount) 
+            cv2.putText(frame, text, (5,25), font, 1, (0, 255, 0), 2)
+            text2 = "X=" + "{:.2f}".format(kx )
+            cv2.putText(frame, text2, (5,50), font, 1, (0, 255, 0), 2)
+            text3 = "Y=" + "{:.2f}".format(ky)
+            cv2.putText(frame, text3, (5,75), font, 1, (0, 255, 0), 2)
+            text4 = "S=" + "{:.2f}".format(ksize)
+            cv2.putText(frame, text4, (5,100), font, 1, (0, 255, 0), 2)
         
         cv2.circle(frame, (int(kx),int(ky)), int(ksize / 2), (0, 255, 0), 2)
         

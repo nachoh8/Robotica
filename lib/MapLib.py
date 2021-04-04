@@ -395,96 +395,105 @@ class Map2D:
     # ############################################################
     # METHODS to IMPLEMENT in P4
     # ############################################################
-
-    # def fillCostMatrix(self, ??):
-    # """
-    # NOTE: Make sure self.costMatrix is a 2D numpy array of dimensions dimX x dimY
-    # TO-DO
-    # """
-    # self.costMatrix = ....
     
     def propagate(self, x, y):
-        n = []
-        v = self.costMatrix[x][y] + 1
+        updated = [] # vecinos actualizados
+        v = self.costMatrix[x][y] + 1 # valor a propagar
+
+        # 4-vecindad
         if x + 1 < self.sizeX_e and self.costMatrix[x + 1][y] == -2: 
             self.costMatrix[x + 1][y] = v
-            n.append((x + 1, y))
+            updated.append((x + 1, y))
         if x - 1 >= 0 and self.costMatrix[x - 1][y] == -2: 
             self.costMatrix[x - 1][y] = v
-            n.append((x - 1, y))
+            updated.append((x - 1, y))
         if y + 1 < self.sizeY_e and self.costMatrix[x][y + 1] == -2: 
             self.costMatrix[x][y + 1] = v
-            n.append((x, y + 1))
+            updated.append((x, y + 1))
         if y - 1 >= 0 and self.costMatrix[x][y - 1] == -2: 
             self.costMatrix[x][y - 1] = v
-            n.append((x, y - 1))
-        return n
+            updated.append((x, y - 1))
         
-
+        return updated
+    
     def fillCostMatrix (self, x_end, y_end):
+        # iniciamos la matriz de costes
         self._initCostMatrix()
         
         for x in range(self.sizeX_e):
             for y in range(self.sizeY_e):
-                if self.connectionMatrix[x][y] == 0:
+                if self.connectionMatrix[x][y] == 0: # los obstaculos a -1
                     self.costMatrix[x][y] = -1
-                    
-        self.costMatrix[x_end][y_end] = 0
         
+        # transformamos el objetivo al mapa extendido
+        goal_x = 2 * x_end + 1
+        goal_y = 2 * y_end + 1
+        self.costMatrix[goal_x][goal_y] = 0
+        
+        # calculo de NF1
         finished = False
-        wavefront = [(x_end, y_end)]
+        wavefront = [(goal_x, goal_y)]
         while not finished:
             candidates = []
-            for pt in wavefront:
+            for pt in wavefront: # propagar wavefront
                 candidates += self.propagate(pt[0], pt[1])
-            if len(candidates) == 0: finished = True
-            else: wavefront = candidates
-                
+            
+            if len(candidates) == 0: finished = True # no hay nuevos vecinos libres
+            else: wavefront = candidates # incrementar wavefront
+    
     def planPath(self, x_ini,  y_ini, x_end, y_end):
         """
         x_ini, y_ini, x_end, y_end: integer values that indicate \
             the x and y coordinates of the starting (ini) and ending (end) cell
-
-        NOTE: Make sure self.currentPath is a 2D numpy array
-        ...  TO-DO  ....
         """
-        # FAKE sample path: [ [0,0], [0,0], [0,0], ...., [0,0]  ]
-        celda_actual = (x_ini, y_ini)
-        self.currentPath = [(x_ini, y_ini)] #np.array( [ [0,0] ] * num_steps )
-        pathFound = False
-        
+
         self.fillCostMatrix(x_end, y_end)
         
-        while celda_actual is not None:            
-            if celda_actual == (x_end, y_end):
-                pathFound = True
-                break
-            
-            x, y = celda_actual
+        current_cell = (2 * x_ini + 1, 2 * y_ini + 1)
+
+        path = [current_cell] # camino en mapa extendido
+        min_cost = self.costMatrix[current_cell[0]][current_cell[1]]
+        
+        while min_cost > 0:
+            x, y = current_cell
             best = None
-            minim = self.costMatrix[x][y]
-            if x + 1 < self.sizeX_e and self.costMatrix[x + 1][y] != -1 and self.costMatrix[x + 1][y] <= minim: 
-                 minim = self.costMatrix[x + 1][y]
-                 best = (x + 1, y)
-            if x - 1 >= 0 and self.costMatrix[x - 1][y] != -1 and self.costMatrix[x - 1][y] <= minim: 
-                 minim = self.costMatrix[x - 1][y]
-                 best = (x - 1, y)
-            if y + 1 < self.sizeY_e and self.costMatrix[x][y + 1] != -1 and self.costMatrix[x][y + 1] <= minim: 
-                 minim = self.costMatrix[x][y + 1]
-                 best = (x, y + 1)
-            if y - 1 >= 0 and self.costMatrix[x][y - 1] != -1 and self.costMatrix[x][y - 1] <= minim: 
-                 minim = self.costMatrix[x][y - 1]
-                 best = (x, y - 1)
-                 
-            celda_actual = best
-            self.currentPath.append(celda_actual)
+
+            if x + 1 < self.sizeX_e and self.costMatrix[x + 1][y] != -1 and self.costMatrix[x + 1][y] < min_cost:
+                min_cost = self.costMatrix[x + 1][y]
+                best = (x + 1, y)
+            if x - 1 >= 0 and self.costMatrix[x - 1][y] != -1 and self.costMatrix[x - 1][y] < min_cost:
+                min_cost = self.costMatrix[x - 1][y]
+                best = (x - 1, y)
+            if y + 1 < self.sizeY_e and self.costMatrix[x][y + 1] != -1 and self.costMatrix[x][y + 1] < min_cost:
+                min_cost = self.costMatrix[x][y + 1]
+                best = (x, y + 1)
+            if y - 1 >= 0 and self.costMatrix[x][y - 1] != -1 and self.costMatrix[x][y - 1] < min_cost:
+                min_cost = self.costMatrix[x][y - 1]
+                best = (x, y - 1)
             
-        print(self.costMatrix)
-        print(self.currentPath)
+            if best is None:
+                min_cost = -1
+            else:
+                current_cell = best
+                path.append(current_cell)
 
-        return pathFound
+        if min_cost != 0: # no ha encontrado un camino
+            self.currentPath = None
+            return
+        
+        # print("Len Path: " + str(len(path)))
+        # print(path)
 
+        # transformar camino a mapa real de celdas
+        # TODO: el punto 0 hay que ponerlo? prq corresponde con la celda de inicio
+        self.currentPath = []
+        for i in range(len(path)):
+            if i%2 == 0: # el punto es una celda real
+                x,y = path[i]
+                real_pt = (int((x-1) / 2), int((y-1) / 2))
+                self.currentPath.append(real_pt)
 
-    # def replanPath(self, ??):
-    # """ TO-DO """
-
+    """
+    QUE DIFERENCIA HAY CON planPath?
+    def replanPath(self, ):
+    """
