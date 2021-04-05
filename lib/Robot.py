@@ -46,6 +46,8 @@ class Robot:
         self.PORT_GRIPPER = BP.PORT_D
         self.PORT_ULTRASONIC_SENSOR = BP.PORT_1
         
+        self.BP.set_sensor_type(self.PORT_ULTRASONIC_SENSOR, self.BP.SENSOR_TYPE.EV3_ULTRASONIC_CM)
+        
         # inicializar camara // TODO
 
         ##################################################
@@ -275,9 +277,10 @@ class Robot:
         
         q_i = self.quadrant(th_i)
         q_f = self.quadrant(th_f)
-        df_q = q_i - q_f
+        df_q = q_f - q_i
         
-        if abs(df_q) == 1 or abs(df_q) == 3: return df_q / abs(df_q)
+        if abs(df_q) == 1: return df_q / abs(df_q)
+        elif abs(df_q) == 3: return -df_q / abs(df_q)
         elif abs(df_q) == 2: return -1
         else:
             df_th = th_f - th_i
@@ -290,7 +293,7 @@ class Robot:
         
         self.setSpeed(0,w)
         
-        """if th_f_down > 0 and th_f_up < 0 or th_f_down < 0 and th_f_up > 0:
+        if th_f_down > 0 and th_f_up < 0 or th_f_down < 0 and th_f_up > 0:
             while not (th > th_f_down or th < th_f_up):
                 time.sleep(self.P_CHECK_POS)
                 x,y,th = self.readOdometry()
@@ -299,7 +302,7 @@ class Robot:
             while not (th > th_f_down and th < th_f_up):
                 time.sleep(self.P_CHECK_POS)
                 x,y,th = self.readOdometry()
-        """
+        
         self.setSpeed(0,0)
                 
     def go(self, x_goal, y_goal, error=0.015):
@@ -311,7 +314,7 @@ class Robot:
            th_goal = norm_rad(th_goal)
            
            # Rotar
-           w = 0.3 * self.rotate_dir(th, th_goal) 
+           w = 0.3 * self.rotate_dir(th, th_goal)
            self.rotate(th, th_goal, w)
            
            # Avanzar
@@ -542,3 +545,5 @@ class Robot:
         
         self.p_camera.terminate()
         
+    def read_ultrasonic(self):
+        return self.BP.get_sensor(self.BP.PORT_1)

@@ -12,7 +12,9 @@ def main():
         robot = Robot() 
         robot.startOdometry()
 
-        robot.go(0, -1)
+        while True:
+            print(robot.read_ultrasonic())
+            time.sleep(0.5)
 
         robot.stopOdometry()
 

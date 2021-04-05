@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
 import argparse
+import os
 import cv2
 import numpy as np
 import time
@@ -18,37 +19,23 @@ def main(args):
             exit(1)
 
         map_file = args.mapfile;
+        init_pos = (args.initx, args.inity);
+        final_pos = (args.finalx, args.finaly);
         # Instantiate Odometry with your own files from P2/P3
-        robot = Robot()
+        # inicializar el robot en la mitad de la baldosa (0.4x0.4)
+        init_x = init_pos[0]* 0.4 + 0.2
+        init_y = init_pos[1] * 0.4 + 0.2
+        robot = Robot(init_position = [init_x, init_y, 0.0])
         # ...
 
         # 1. load map and compute costs and path
         myMap = Map2D(map_file)
-        #myMap.verbose = True
-        myMap.drawMap(saveSnapshot=False)
-
-        # you can set verbose to False to stop displaying plots interactively
-        # (and maybe just save the snapshots of the map)
-        # myMap.verbose = False
-
-        # sample commands to see how to draw the map
-        sampleRobotLocations = [ [0,0,0], [600, 600, 3.14] ]
-        # this will save a .png with the current map visualization,
-        # all robot positions, last one in green
-        #myMap.verbose = True
-        myMap.drawMapWithRobotLocations( sampleRobotLocations, saveSnapshot=False )
-
-        # this shows the current, and empty, map and an additionally closed connection
-        myMap.deleteConnection(0,0,0)
-        #myMap.verbose = True
-        myMap.drawMap(saveSnapshot=False)
-
-        # this will open a window with the results, but does not work well remotely
-        #myMap.verbose = True
-        sampleRobotLocations = [ [200, 200, 3.14/2.0], [200, 600, 3.14/4.0], [200, 1000, -3.14/2.0],  ]
-        myMap.drawMapWithRobotLocations( sampleRobotLocations, saveSnapshot=False )
-
-        matplotlib.pyplot.close('all')
+        myMap.planPath(init_pos[0], init_pos[1], final_pos[0], final_pos[1])
+        path = myMap.currentPath
+        if path is None: exit(1)
+        print(path)
+        path.pop(0) # eliminamos la posición actual inicial
+       
         # 2. launch updateOdometry thread()
         robot.startOdometry()
         # ...
@@ -56,26 +43,27 @@ def main(args):
 
         # 3. perform trajectory
         # robot.setSpeed(1,1) ...
-        while (notfinished):
-
-            robot.go(pathX[i],pathY[i]);
+        while len(path) > 0:
+            next_pos = path.pop(0)
+            dir_pos = ((next_pos[0] - init_pos[0]) * 0.4, (next_pos[1] - init_pos[1]) * 0.4)
+            init_pos = next_pos
+			
+            x, y, th = robot.readOdometry()
+            print(x,y,th)
+            robot.go(x + dir_pos[0], y + dir_pos[1]);
             # check if there are close obstacles
             # deal with them...
             # Avoid_obstacle(...) OR RePlanPath(...)
         
-
-
-
-
         # 4. wrap up and close stuff ...
         # This currently unconfigure the sensors, disable the motors,
         # and restore the LED to the control of the BrickPi3 firmware.
-        # robot.stopOdometry()
+        robot.stopOdometry()
 
     except KeyboardInterrupt:
     # except the program gets interrupted by Ctrl+C on the keyboard.
     # THIS IS IMPORTANT if we want that motors STOP when we Ctrl+C ...
-    #    robot.stopOdometry()
+        robot.stopOdometry()
         print('do something to stop Robot when we Ctrl+C ...')
 
 
@@ -85,7 +73,15 @@ if __name__ == "__main__":
     # Add as many args as you need ...
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--mapfile", help="path to find map file",
-                        default="mapa1.txt")
+                        default="P4/mapa0.txt")
+    parser.add_argument("-ix", "--initx", help="initial position x",
+                        default=0, type = int)
+    parser.add_argument("-iy", "--inity", help="initial position y",
+                        default=0, type = int)                    
+    parser.add_argument("-fx", "--finalx", help="final position x",
+                        default=0, type = int)
+    parser.add_argument("-fy", "--finaly", help="final position y",
+                        default=2, type = int)                    
     args = parser.parse_args()
     main(args)
 
