@@ -34,7 +34,6 @@ def main(args):
         path = myMap.currentPath
         if path is None: exit(1)
         print(path)
-        path.pop(0) # eliminamos la posición actual inicial
        
         # 2. launch updateOdometry thread()
         robot.startOdometry()
@@ -46,11 +45,25 @@ def main(args):
         while len(path) > 0:
             next_pos = path.pop(0)
             dir_pos = ((next_pos[0] - init_pos[0]) * 0.4, (next_pos[1] - init_pos[1]) * 0.4)
-            init_pos = next_pos
-			
+            print(dir_pos)
             x, y, th = robot.readOdometry()
             print(x,y,th)
-            robot.go(x + dir_pos[0], y + dir_pos[1]);
+            if not robot.go(x + dir_pos[0], y + dir_pos[1]):
+                print("Recalculando ruta...")
+				# Añadir pared detectada
+                neigh = myMap.get_numneigh(dir_pos[0], dir_pos[1])
+                myMap.deleteConnection(init_pos[0], init_pos[1], neigh)
+                
+				# Volver a planear la ruta
+                myMap.planPath(init_pos[0], init_pos[1], final_pos[0], final_pos[1])
+                path = myMap.currentPath
+                if path is None: break
+                print(path)
+            else:
+                init_pos = next_pos
+				
+				
+				
             # check if there are close obstacles
             # deal with them...
             # Avoid_obstacle(...) OR RePlanPath(...)

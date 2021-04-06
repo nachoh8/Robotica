@@ -47,6 +47,7 @@ class Robot:
         self.PORT_ULTRASONIC_SENSOR = BP.PORT_1
         
         self.BP.set_sensor_type(self.PORT_ULTRASONIC_SENSOR, self.BP.SENSOR_TYPE.EV3_ULTRASONIC_CM)
+        time.sleep(5)
         
         # inicializar camara // TODO
 
@@ -273,8 +274,7 @@ class Robot:
         elif th >= -np.pi and th < -np.pi / 2: return 3
         else: return 4
         
-    def rotate_dir (self, th_i, th_f):
-        
+    def rotate_dir (self, th_i, th_f):        
         q_i = self.quadrant(th_i)
         q_f = self.quadrant(th_f)
         df_q = q_f - q_i
@@ -292,11 +292,19 @@ class Robot:
         th_f_up = norm_rad(th_f + error_margin)
         
         self.setSpeed(0,w)
-        
+        print(th, th_f, th_f_down, th_f_up)
         if th_f_down > 0 and th_f_up < 0 or th_f_down < 0 and th_f_up > 0:
-            while not (th > th_f_down or th < th_f_up):
-                time.sleep(self.P_CHECK_POS)
-                x,y,th = self.readOdometry()
+            #while not (th > th_f_down or th < th_f_up):
+                #time.sleep(self.P_CHECK_POS)
+                #x,y,th = self.readOdometry()
+            if th_f_down <= 0:
+                while not (th < th_f_up and th > th_f_down):
+                    time.sleep(self.P_CHECK_POS)
+                    x,y,th = self.readOdometry()
+            else:
+                while not (th < th_f_up or th > th_f_down):
+                    time.sleep(self.P_CHECK_POS)
+                    x,y,th = self.readOdometry()
                 
         else:
             while not (th > th_f_down and th < th_f_up):
@@ -304,7 +312,16 @@ class Robot:
                 x,y,th = self.readOdometry()
         
         self.setSpeed(0,0)
-                
+        
+    def read_ultrasonic(self):
+        while True:
+            try:
+                return self.BP.get_sensor(self.BP.PORT_1)
+            except: 
+                pass
+            time.sleep(0.1)
+        
+        
     def go(self, x_goal, y_goal, error=0.015):
            x,y,th = self.readOdometry()
            
@@ -318,9 +335,11 @@ class Robot:
            self.rotate(th, th_goal, w)
            
            # Avanzar
+           if self.read_ultrasonic() < 30:
+               return False
            x,y,th = self.readOdometry()
            self.setSpeed(0.1,0)
-           
+           print(x_goal, y_goal)
            if abs(x_goal - x) > error: # en X
                while abs(x_goal - x) > error:
                    time.sleep(self.P_CHECK_POS)
@@ -331,6 +350,7 @@ class Robot:
                    x,y,th = self.readOdometry()
                
            self.setSpeed(0,0)
+           return True
                                
     def catch (self, up:bool):
         """
@@ -545,5 +565,3 @@ class Robot:
         
         self.p_camera.terminate()
         
-    def read_ultrasonic(self):
-        return self.BP.get_sensor(self.BP.PORT_1)

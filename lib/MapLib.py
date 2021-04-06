@@ -396,6 +396,14 @@ class Map2D:
     # METHODS to IMPLEMENT in P4
     # ############################################################
     
+    def get_numneigh(self, dir_x, dir_y):
+        if dir_x == 0:
+            if dir_y == 0.4: return 0
+            else: return 4
+        else:
+            if dir_x == 0.4: return 2
+            else: return 6
+    
     def propagate(self, x, y):
         updated = [] # vecinos actualizados
         v = self.costMatrix[x][y] + 1 # valor a propagar
@@ -459,17 +467,17 @@ class Map2D:
             best = None
 
             if x + 1 < self.sizeX_e and self.costMatrix[x + 1][y] != -1 and self.costMatrix[x + 1][y] < min_cost:
-                min_cost = self.costMatrix[x + 1][y]
-                best = (x + 1, y)
+                min_cost = self.costMatrix[x + 2][y]
+                best = (x + 2, y)
             if x - 1 >= 0 and self.costMatrix[x - 1][y] != -1 and self.costMatrix[x - 1][y] < min_cost:
-                min_cost = self.costMatrix[x - 1][y]
-                best = (x - 1, y)
+                min_cost = self.costMatrix[x - 2][y]
+                best = (x - 2, y)
             if y + 1 < self.sizeY_e and self.costMatrix[x][y + 1] != -1 and self.costMatrix[x][y + 1] < min_cost:
-                min_cost = self.costMatrix[x][y + 1]
-                best = (x, y + 1)
+                min_cost = self.costMatrix[x][y + 2]
+                best = (x, y + 2)
             if y - 1 >= 0 and self.costMatrix[x][y - 1] != -1 and self.costMatrix[x][y - 1] < min_cost:
-                min_cost = self.costMatrix[x][y - 1]
-                best = (x, y - 1)
+                min_cost = self.costMatrix[x][y - 2]
+                best = (x, y - 2)
             
             if best is None:
                 min_cost = -1
@@ -487,11 +495,10 @@ class Map2D:
         # transformar camino a mapa real de celdas
         # TODO: el punto 0 hay que ponerlo? prq corresponde con la celda de inicio
         self.currentPath = []
-        for i in range(len(path)):
-            if i%2 == 0: # el punto es una celda real
-                x,y = path[i]
-                real_pt = (int((x-1) / 2), int((y-1) / 2))
-                self.currentPath.append(real_pt)
+        for i in range(1, len(path)):
+            x,y = path[i]
+            real_pt = (int((x-1) / 2), int((y-1) / 2))
+            self.currentPath.append(real_pt)
 
     """
     QUE DIFERENCIA HAY CON planPath?
