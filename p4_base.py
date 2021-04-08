@@ -19,7 +19,7 @@ def main(args):
             exit(1)
 
         map_file = args.mapfile
-        init_pos = (args.initx, args.inity
+        init_pos = (args.initx, args.inity)
         final_pos = (args.finalx, args.finaly)
         # Instantiate Odometry with your own files from P2/P3
         # inicializar el robot en la mitad de la baldosa (0.4x0.4)
@@ -32,8 +32,8 @@ def main(args):
         myMap = Map2D(map_file)
         path = myMap.planPath(init_pos[0], init_pos[1], final_pos[0], final_pos[1])
         if path is None:
-			print("No he encontrado el camino")
-			exit(1)
+            print("No he encontrado el camino")
+            exit(1)
         print(path)
        
         # 2. launch updateOdometry thread()
@@ -54,8 +54,8 @@ def main(args):
 				# Volver a planear la ruta
                 path = myMap.planPath(init_pos[0], init_pos[1], final_pos[0], final_pos[1])
                 if path is None:
-					print("Me he perdido")
-					break
+                    print("Me he perdido")
+                    break
                 print(path)
             else:
                 init_pos = next_pos
