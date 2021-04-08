@@ -57,8 +57,6 @@ def main(args):
             else:
                 init_pos = next_pos
 				
-				
-				
             # check if there are close obstacles
             # deal with them...
             # Avoid_obstacle(...) OR RePlanPath(...)
