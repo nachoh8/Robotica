@@ -398,11 +398,11 @@ class Map2D:
     
     def get_numneigh(self, dir_x, dir_y):
         if dir_x == 0:
-            if dir_y == 0.4: return 0
-            else: return 4
+            if dir_y == 0.4: return [7,0,1]
+            else: return [3,4,5]
         else:
-            if dir_x == 0.4: return 2
-            else: return 6
+            if dir_x == 0.4: return [1,2,3]
+            else: return [5,6,7]
     
     def propagate(self, x, y):
         updated = [] # vecinos actualizados
@@ -487,20 +487,13 @@ class Map2D:
 
         if min_cost != 0: # no ha encontrado un camino
             self.currentPath = None
-            return
-        
-        # print("Len Path: " + str(len(path)))
-        # print(path)
+            return self.currentPath
 
         # transformar camino a mapa real de celdas
-        # TODO: el punto 0 hay que ponerlo? prq corresponde con la celda de inicio
         self.currentPath = []
         for i in range(1, len(path)):
             x,y = path[i]
             real_pt = (int((x-1) / 2), int((y-1) / 2))
             self.currentPath.append(real_pt)
-
-    """
-    QUE DIFERENCIA HAY CON planPath?
-    def replanPath(self, ):
-    """
+        
+        return self.currentPath

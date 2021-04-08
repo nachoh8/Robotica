@@ -287,12 +287,11 @@ class Robot:
             if df_th == 0: return 0
             return df_th / abs(df_th)  
             
-    def rotate (self, th, th_f, w, error_margin=0.015):
+    def rotate (self, th, th_f, w, error_margin=0.01):
         th_f_down = norm_rad(th_f - error_margin)
         th_f_up = norm_rad(th_f + error_margin)
         
         self.setSpeed(0,w)
-        print(th, th_f, th_f_down, th_f_up)
         if th_f_down > 0 and th_f_up < 0 or th_f_down < 0 and th_f_up > 0:
             #while not (th > th_f_down or th < th_f_up):
                 #time.sleep(self.P_CHECK_POS)
@@ -339,7 +338,6 @@ class Robot:
                return False
            x,y,th = self.readOdometry()
            self.setSpeed(0.1,0)
-           print(x_goal, y_goal)
            if abs(x_goal - x) > error: # en X
                while abs(x_goal - x) > error:
                    time.sleep(self.P_CHECK_POS)

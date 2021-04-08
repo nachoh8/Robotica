@@ -26,37 +26,32 @@ def main(args):
         init_x = init_pos[0]* 0.4 + 0.2
         init_y = init_pos[1] * 0.4 + 0.2
         robot = Robot(init_position = [init_x, init_y, 0.0])
-        # ...
+
 
         # 1. load map and compute costs and path
         myMap = Map2D(map_file)
-        myMap.planPath(init_pos[0], init_pos[1], final_pos[0], final_pos[1])
-        path = myMap.currentPath
+        path = myMap.planPath(init_pos[0], init_pos[1], final_pos[0], final_pos[1])
         if path is None: exit(1)
         print(path)
        
         # 2. launch updateOdometry thread()
         robot.startOdometry()
-        # ...
-
 
         # 3. perform trajectory
         # robot.setSpeed(1,1) ...
         while len(path) > 0:
             next_pos = path.pop(0)
             dir_pos = ((next_pos[0] - init_pos[0]) * 0.4, (next_pos[1] - init_pos[1]) * 0.4)
-            print(dir_pos)
             x, y, th = robot.readOdometry()
-            print(x,y,th)
-            if not robot.go(x + dir_pos[0], y + dir_pos[1]):
+            if not robot.go(x + dir_pos[0], y + dir_pos[1], error=0.005):
                 print("Recalculando ruta...")
 				# Añadir pared detectada
                 neigh = myMap.get_numneigh(dir_pos[0], dir_pos[1])
-                myMap.deleteConnection(init_pos[0], init_pos[1], neigh)
+                for n in neigh:
+                    myMap.deleteConnection(init_pos[0], init_pos[1], n)
                 
 				# Volver a planear la ruta
-                myMap.planPath(init_pos[0], init_pos[1], final_pos[0], final_pos[1])
-                path = myMap.currentPath
+                path = myMap.planPath(init_pos[0], init_pos[1], final_pos[0], final_pos[1])
                 if path is None: break
                 print(path)
             else:
