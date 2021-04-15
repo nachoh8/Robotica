@@ -42,13 +42,9 @@ def main(args):
         # 3. perform trajectory
         while len(path) > 0:
             next_pos = path.pop(0)
-            print(next_pos)
             dir_pos = ((next_pos[0] - init_pos[0]) * 0.4, (next_pos[1] - init_pos[1]) * 0.4)
             x, y, th = robot.readOdometry()
-            print("Odom: " + str(x) + " " + str(y) + " "+ str(th))
-            goal = (next_pos[0]* 0.4 + 0.2, next_pos[1]* 0.4 + 0.2)
-            print("Destino: " + str(goal))
-            if not robot.go(goal[0], goal[1], error=0.005):
+            if not robot.go(x + dir_pos[0], y + dir_pos[1], error=0.005):
                 print("Recalculando ruta...")
 				# Añadir pared detectada
                 neigh = myMap.get_numneigh(dir_pos[0], dir_pos[1])
@@ -90,7 +86,7 @@ if __name__ == "__main__":
     parser.add_argument("-iy", "--inity", help="initial position y",
                         default=0, type = int)                    
     parser.add_argument("-fx", "--finalx", help="final position x",
-                        default=2, type = int)
+                        default=0, type = int)
     parser.add_argument("-fy", "--finaly", help="final position y",
                         default=2, type = int)                    
     args = parser.parse_args()

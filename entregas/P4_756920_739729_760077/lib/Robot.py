@@ -39,7 +39,7 @@ class Robot:
 
         # Robot construction parameters
         self.radio_rueda = 0.028 # m
-        self.long_ruedas = 0.11 # m
+        self.long_ruedas = 0.115 # m
         self.BP = BP
         self.PORT_LEFT_WHEEL = BP.PORT_C
         self.PORT_RIGHT_WHEEL = BP.PORT_B
@@ -148,7 +148,7 @@ class Robot:
             # Calculo velocidades angulares en cada motor
             wMotorR = (rdMotorR - self.rdMotorR_prev) / self.P
             wMotorL = (rdMotorL - self.rdMotorL_prev) / self.P
-            
+              
             # Calculo velocidades actuales
             v_w = np.array([[self.radio_rueda / 2, self.radio_rueda / 2],
                             [self.radio_rueda / self.long_ruedas, -self.radio_rueda / self.long_ruedas]
@@ -208,7 +208,6 @@ class Robot:
                 th_f = norm_rad(th + w * self.P)
                 x += div * (math.sin(th_f) - math.sin(th))
                 y -= div * (math.cos(th_f) - math.cos(th))
-                
 
             # update odometry values
             self.lock_odometry.acquire()
@@ -275,7 +274,6 @@ class Robot:
         elif th >= -np.pi and th < -np.pi / 2: return 3
         else: return 4
         
-    """
     def rotate_dir (self, th_i, th_f):        
         q_i = self.quadrant(th_i)
         q_f = self.quadrant(th_f)
@@ -287,37 +285,9 @@ class Robot:
         else:
             df_th = th_f - th_i
             if df_th == 0: return 0
-            return df_th / abs(df_th)
-    """
-    def rotate_dir (self, th_i, th_f):
-        if abs(abs(th_i)-abs(th_f)) < 0.000001: return 0
-          
-        if (th_i > 0 and th_f > 0) or (th_i < 0 and th_f < 0):
-            return (th_f - th_i) / abs(th_f - th_i)
-        elif th_i > 0 and th_f < 0:
-            if abs(th_i) + abs(th_f) >= np.pi:
-                return 1
-            else:
-                return -1
-        elif th_i < 0 and th_f > 0:
-            if abs(th_i) + abs(th_f) >= np.pi:
-                return -1
-            else:
-                return 1
-        elif th_f == 0:
-            return -1 if th_i > 0 else 1
-        else: # th_i == 0:
-            return 1 if th_f > 0 else -1
-    
-    def rotate_dir_v2(self, dx, dy, th):
-        beta = norm_rad(np.arctan2(dy, dx)+np.pi)
-        alfa = beta - th
-        print(beta)
-        print(alfa)
-        print(0.5*alfa+0.5*beta)
+            return df_th / abs(df_th)  
             
-    
-    def rotate1 (self, th, th_f, w, error_margin=0.01):
+    def rotate (self, th, th_f, w, error_margin=0.01):
         th_f_down = norm_rad(th_f - error_margin)
         th_f_up = norm_rad(th_f + error_margin)
         
@@ -341,14 +311,6 @@ class Robot:
                 x,y,th = self.readOdometry()
         
         self.setSpeed(0,0)
-    
-    def rotate2 (self, th, th_f, w, error_margin=0.01):
-        if w == 0: return
-        
-        if w > 0:
-            pass
-        
-        self.setSpeed(0,0)
         
     def read_ultrasonic(self):
         while True:
@@ -357,27 +319,8 @@ class Robot:
             except: 
                 pass
             time.sleep(0.1)
-    
-    def rotate(self, th, w, th_error_margin=0.015):
-        """
-        Wait until the robot reaches the position
-        :param th_error_margin: error allowed in the orientation
-        """
-        self.setSpeed(0.0,w)
-        [_, _, th_odo] = self.readOdometry()
-
-        # Repeat while error decrease
-        last_error = abs(norm_rad(th - th_odo))
-        actual_error = last_error
-        while th_error_margin < actual_error:
-            last_error = actual_error
-            while last_error >= actual_error:
-                [_, _, th_odo] = self.readOdometry()
-                last_error = actual_error
-                actual_error = abs(norm_rad(th - th_odo))
-                time.sleep(self.P_CHECK_POS)
-        self.setSpeed(0.0,0.0)
-                
+        
+        
     def go(self, x_goal, y_goal, error=0.015):
            x,y,th = self.readOdometry()
            
@@ -385,20 +328,17 @@ class Robot:
            v = (x_goal - x, y_goal - y)
            th_goal = np.arctan2(v[1], v[0])
            th_goal = norm_rad(th_goal)
-           print("th_g: " + str(th_goal))
            
            # Rotar
            w = 0.3 * self.rotate_dir(th, th_goal)
-           print("w: " + str(w))
-           self.rotate(th_goal, w)
+           self.rotate(th, th_goal, w)
            
            # Avanzar
            if self.read_ultrasonic() < 30:
                return False
            x,y,th = self.readOdometry()
            self.setSpeed(0.1,0)
-           
-           if abs(x_goal - x) > 0.2: # en X
+           if abs(x_goal - x) > error: # en X
                while abs(x_goal - x) > error:
                    time.sleep(self.P_CHECK_POS)
                    x,y,th = self.readOdometry()

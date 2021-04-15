@@ -40,16 +40,3 @@ def hom(xWR: np.array) -> np.array:
 
 def loc(tWR: np.array) -> np.array:
   return np.array([tWR[0][2], tWR[1][2], np.arctan2(tWR[1][0], tWR[0][0])])
-  
-def read_light():
-  import time
-  import brickpi3
-  BP = brickpi3.BrickPi3()
-  BP.set_sensor_type(BP.PORT_2, BP.SENSOR_TYPE.NXT_LIGHT_ON)
-  time.sleep(2)
-  while True:
-      try:
-          return BP.get_sensor(BP.PORT_2)
-      except: 
-          pass
-      time.sleep(0.1)
