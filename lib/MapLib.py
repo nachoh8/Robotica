@@ -139,6 +139,7 @@ class Map2D:
                     print("Wrong connectionMatrix (%s) row data: %s" % (self.connectionMatrix.shape(), line) )
                     return False
             mapF.close()
+            self.connectionMatrix = self.connectionMatrix.transpose()[::-1]                   
             loadingOk = True
         except Exception as e:
             print("ERROR:", e.__doc__)
@@ -490,6 +491,8 @@ class Map2D:
             return self.currentPath
 
         # transformar camino a mapa real de celdas
+        print(path)
+        print(self.costMatrix)
         self.currentPath = []
         for i in range(1, len(path)):
             x,y = path[i]

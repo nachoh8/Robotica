@@ -28,7 +28,7 @@ def main():
         for i in range(1,num_b):
             x_f = 0.4*i
             
-            acc(v, robot)
+            robot.setSpeed(v, 0)
             while x_f-x > 0:
                 time.sleep(robot.P_CHECK_POS)
                 x,y,th = robot.readOdometry()

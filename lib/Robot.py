@@ -45,8 +45,10 @@ class Robot:
         self.PORT_RIGHT_WHEEL = BP.PORT_B
         self.PORT_GRIPPER = BP.PORT_D
         self.PORT_ULTRASONIC_SENSOR = BP.PORT_1
+        self.PORT_GYRO_SENSOR = BP.PORT_3
         
         self.BP.set_sensor_type(self.PORT_ULTRASONIC_SENSOR, self.BP.SENSOR_TYPE.EV3_ULTRASONIC_CM)
+        self.BP.set_sensor_type(self.PORT_GYRO_SENSOR, self.BP.SENSOR_TYPE.CUSTOM, [(self.BP.SENSOR_CUSTOM.PIN1_ADC)])
         time.sleep(5)
         
         # inicializar camara // TODO
@@ -202,12 +204,26 @@ class Robot:
             if w == 0: # moviemiento recto
                 x += self.P * v * math.cos(th)
                 y += self.P * v * math.sin(th)
-                th_f = norm_rad(th)
+                th_f = th
+                
             else: # movimiento circular
                 div = v/w
+                th_aux = norm_rad(th + w * self.P)
+                x += div * (math.sin(th_aux) - math.sin(th))
+                y -= div * (math.cos(th_aux) - math.cos(th))
+                th_f = th_aux
+            
+            """try:
+                gyro = -(self.BP.get_sensor(self.BP.PORT_3)[0] - 2430) * 0.14 * self.P
+                print("w: " + str(w) + " | " + str(gyro))
+                w = (w + gyro) / 2.0
+                print("w_f: " + str(w))
                 th_f = norm_rad(th + w * self.P)
-                x += div * (math.sin(th_f) - math.sin(th))
-                y -= div * (math.cos(th_f) - math.cos(th))
+                # print(gyro, actual_value_gyro_1)   # print the gyro sensor values
+                
+            except brickpi3.SensorError as error:
+                # print(error)
+                th_f = norm_rad(th)"""
                 
 
             # update odometry values
