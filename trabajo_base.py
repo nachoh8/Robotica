@@ -8,32 +8,39 @@ import time
 from lib.Robot import Robot
 from lib.MapLib import Map2D
 from lib.utils import read_light
+from lib.rec_logo import RecLogo
 
 def main(args):
 
     path = []
     init_pos = None
     fin_pos = None
+    logo_pos = None
+    fin_dch = (0,6)
+    fin_izq = (0,3)
     map_file = ""
 
     try:
         #robot = Robot(init_position = [init_x, init_y, 0.0])
         #if read_light() > 1550:
+        traj_black = read_light() > 1550
         if False:
             # negro
             print("negro")
             init_pos = (0,1)
-            fin_pos = (4,3)
+            fin_pos = (4,6)
             path = [(0,0), (1,0), (2,0), (2,1), (2,2), (3,2), (4,2), (4,1)]
             map_file = "P5/mapaB_CARRERA.txt"
+            logo_pos = (0,5)
             
         else:
             # blanco
             print("blanco")
             init_pos = (4,1)
-            fin_pos = (4,6)
+            fin_pos = (4,3)
             path = [(0,0), (1,0), (2,0), (2,1), (2,2), (3,2), (4,2), (4,1)]
             map_file = "P5/mapaA_CARRERA.txt"
+            logo_pos = (0,4)
             
         init_x = init_pos[0] * 0.4 + 0.2
         init_y = init_pos[1] * 0.4 + 0.2
@@ -44,6 +51,7 @@ def main(args):
         robot.startOdometry()
 
         # Perform trajectory
+        # Slalom
         while len(path) > 0:
             next_pos = path.pop(0)
             print(next_pos)
@@ -60,9 +68,8 @@ def main(args):
         
         print("Fin S alcanzado")
         
-        path = myMap.planPath(init_pos[0], init_pos[1], fin_pos[0], fin_pos[1])
-        print(path)
-        # Perform trajectory
+        # Obstacles
+        path = myMap.planPath(init_pos[0], init_pos[1], fin_pos[0], fin_pos[1])   
         while len(path) > 0:
             next_pos = path.pop(0)
             print(next_pos)
@@ -88,7 +95,38 @@ def main(args):
                 init_pos = next_pos
         
         print("Fin PLAN")
-                
+        
+        # Red ball
+        if traj_black:
+            robot.go(3, 6, error=0.005)
+        else:
+            robot.go(3, 3, error=0.005)
+            
+        robot.trackObject((0,200,20),(5,255,200) , (170,200,20),(180,255,200))
+        
+        # Logo
+        robot.go(logo_pos[0], logo_pos[1], error=0.005)
+        robot.rotate(np.pi, 0.2)
+        rec = RecLogo(debug=0)
+        
+        r2d2 = False
+        bb8 = False
+        while not r2d2 and not bb8:
+            r2d2 = rec.find_logo("P5/R2_D2.png")
+            bb8 = rec.find_logo("P5/BB8_s.png")
+            time.sleep(0.1)
+        
+        if r2d2:
+            robot.go(fin_dch[0], fin_dch[1], error=0.005)
+            # Salir por la puerta
+            robot.rotate(np.pi, 0.2)
+            robot.go(fin_dch[0] - 1, fin_dch[1], error=0.005)
+        else:
+            robot.go(fin_izq[0], fin_izq[1], error=0.005)
+            # Salir por la puerta
+            robot.rotate(np.pi, 0.2)
+            robot.go(fin_izq[0] - 1, fin_izq[1], error=0.005)
+        
         
         robot.stopOdometry()
 

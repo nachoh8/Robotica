@@ -457,7 +457,11 @@ class Robot:
         for img in cam.capture_continuous(rawCapture, format="bgr", use_video_port=True):
 
             frame = img.array
-            # cv2.imshow('Captura', frame)
+            frame = cv2.line(frame,(0,0),(319,0),(0,0,0),1)
+            frame = cv2.line(frame,(0,0),(0,239),(0,0,0),1)
+            frame = cv2.line(frame,(319,239),(319,0),(0,0,0),1)
+            frame = cv2.line(frame,(319,239),(0,239),(0,0,0),1)
+            
             x, y, size = self.get_blobs(frame, colorRangeMin0, colorRangeMax0, colorRangeMin1, colorRangeMax1)
             self.lock_camera.acquire()
             self.x_blob.value, self.y_blob.value, self.size_blob.value = x, y, size

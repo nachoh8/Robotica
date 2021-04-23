@@ -248,40 +248,40 @@ class RecLogo:
 
         if PI:
             print("**** processing PI-CAM image file ****")
-
-            while True:
-                t1 = time.time()
-                rectFound = False
-                self.cam.capture(self.rawCapture, format="bgr")
-                frame = self.rawCapture.array  
-                
-                # frame = cv2.flip(frame, -1) # to rotate 180
-                if self.DEBUG > 2:
-                    cv2.imshow("Current view", frame)
-                    cv2.imshow("Current target", imReference)
-                    cv2.waitKey(0)
-                
-                t2 = time.time()
-                found = self.match_images(imReference, frame)
-                t3 = time.time()
-                print("time to match %.2f" %(t3-t2))
-                
-                self.rawCapture.truncate(0)
-                         
-                if self.DEBUG:
-                    if found:
-                        cv2.waitKey(0)    
-                    k = cv2.waitKey(1) & 0xff
-                    if k == letter_s:
-                        cv2.imwrite(str(time.time())+"_image.jpg", frame)
-                    if k == ESC:
-                        self.cam.close()
-                        break
+            
+            t1 = time.time()
+            rectFound = False
+            self.cam.capture(self.rawCapture, format="bgr")
+            frame = self.rawCapture.array  
+            
+            # frame = cv2.flip(frame, -1) # to rotate 180
+            if self.DEBUG > 2:
+                cv2.imshow("Current view", frame)
+                cv2.imshow("Current target", imReference)
+                cv2.waitKey(0)
+            
+            t2 = time.time()
+            found = self.match_images(imReference, frame)
+            t3 = time.time()
+            print("time to match %.2f" %(t3-t2))
+            
+            self.rawCapture.truncate(0)
+                     
+            if self.DEBUG:
+                if found:
+                    cv2.waitKey(0)    
+                k = cv2.waitKey(1) & 0xff
+                if k == letter_s:
+                    cv2.imwrite(str(time.time())+"_image.jpg", frame)
+                if k == ESC:
+                    self.cam.close()
+                    break
 
         else:
             pass
         
         cv2.destroyAllWindows()
+        return found
 
 def main():
     
