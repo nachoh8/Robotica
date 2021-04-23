@@ -10,6 +10,16 @@ from lib.MapLib import Map2D
 from lib.utils import read_light
 from lib.rec_logo import RecLogo
 
+def _8_A(robot):
+    robot.go_to(0, -0.25, 0, 0, -np.pi/2, error)
+    robot.go_to(0.1, 0.25, 0, 0, np.pi/2, error)
+    robot.go_to(0.1, -0.25, 0, 0, -np.pi/2, error)
+
+def _8_B(robot):
+    robot.go_to(0, 0.25, 0, 0, np.pi/2, error)
+    robot.go_to(0.1, -0.25, 0, 0, -np.pi/2, error)
+    robot.go_to(0.1, 0.25, 0, 0, np.pi/2, error)
+
 def main(args):
 
     path = []
@@ -29,7 +39,7 @@ def main(args):
             print("negro")
             init_pos = (0,1)
             fin_pos = (4,6)
-            path = [(0,0), (1,0), (2,0), (2,1), (2,2), (3,2), (4,2), (4,1)]
+            path = [(0,0), (1,0), (2,0), (2,1), (2,2), (3,2), (4,2), (4,1)] # TODO
             map_file = "P5/mapaB_CARRERA.txt"
             logo_pos = (0,5)
             
@@ -52,7 +62,7 @@ def main(args):
 
         # Perform trajectory
         # Slalom
-        while len(path) > 0:
+        """while len(path) > 0:
             next_pos = path.pop(0)
             print(next_pos)
             dir_pos = ((next_pos[0] - init_pos[0]) * 0.4, (next_pos[1] - init_pos[1]) * 0.4)
@@ -64,7 +74,14 @@ def main(args):
                 print("Recalculando ruta...")
                 exit(0)
             else:
-                init_pos = next_pos
+                init_pos = next_pos"""
+        
+        if traj_black:
+            _8_B(robot)
+        else:
+            _8_A(robot)
+            
+        robot.rotate(0.0, 0.25)
         
         print("Fin S alcanzado")
         
@@ -106,7 +123,7 @@ def main(args):
         
         # Logo
         robot.go(logo_pos[0], logo_pos[1], error=0.005)
-        robot.rotate(np.pi, 0.2)
+        robot.rotate(np.pi, 0.25)
         rec = RecLogo(debug=0)
         
         r2d2 = False
@@ -119,12 +136,12 @@ def main(args):
         if r2d2:
             robot.go(fin_dch[0], fin_dch[1], error=0.005)
             # Salir por la puerta
-            robot.rotate(np.pi, 0.2)
+            robot.rotate(np.pi, 0.25)
             robot.go(fin_dch[0] - 1, fin_dch[1], error=0.005)
         else:
             robot.go(fin_izq[0], fin_izq[1], error=0.005)
             # Salir por la puerta
-            robot.rotate(np.pi, 0.2)
+            robot.rotate(np.pi, 0.25)
             robot.go(fin_izq[0] - 1, fin_izq[1], error=0.005)
         
         
