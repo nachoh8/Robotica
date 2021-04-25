@@ -275,7 +275,7 @@ class RecLogo:
                     cv2.imwrite(str(time.time())+"_image.jpg", frame)
                 if k == ESC:
                     self.cam.close()
-                    break
+                
 
         else:
             pass

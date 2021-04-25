@@ -251,6 +251,12 @@ class Robot:
         sys.stdout.write("Stopping odometry ... X=  %.2f, \
                 Y=  %.2f, th=  %.2f \n" %(self.x.value, self.y.value, self.th.value))
                 
+    def changeOdometry(self, x, y, th):
+        self.lock_odometry.acquire()
+        self.x.value = x
+        self.y.value = y
+        self.th.value = th
+        self.lock_odometry.release()
 
     # Stop the odometry thread.
     def stopOdometry(self):

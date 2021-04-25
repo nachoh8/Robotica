@@ -10,9 +10,13 @@ from lib.MapLib import Map2D
 from lib.utils import read_light
 from lib.rec_logo import RecLogo
 
+error = 0.015
+
 def _8_A(robot):
     robot.go_to(0, -0.25, 0, 0, -np.pi/2, error)
-    robot.go_to(0.1, 0.25, 0, 0, np.pi/2, error)
+    robot.go_to(0.1, 0.28, 0, 0, np.pi/2, error)
+    robot.setSpeed(0.1,0.25)
+    time.sleep(0.9)
     robot.go_to(0.1, -0.25, 0, 0, -np.pi/2, error)
 
 def _8_B(robot):
@@ -34,7 +38,8 @@ def main(args):
         #robot = Robot(init_position = [init_x, init_y, 0.0])
         #if read_light() > 1550:
         traj_black = read_light() > 1550
-        if False:
+        traj_black = False
+        if traj_black:
             # negro
             print("negro")
             init_pos = (0,1)
@@ -46,7 +51,7 @@ def main(args):
         else:
             # blanco
             print("blanco")
-            init_pos = (4,1)
+            init_pos = (0,1)
             fin_pos = (4,3)
             path = [(0,0), (1,0), (2,0), (2,1), (2,2), (3,2), (4,2), (4,1)]
             map_file = "P5/mapaA_CARRERA.txt"
@@ -76,12 +81,14 @@ def main(args):
             else:
                 init_pos = next_pos"""
         
-        if traj_black:
+        """if traj_black:
             _8_B(robot)
+            #robot.changeOdometry(1.8,0.6,np.pi/2)
         else:
             _8_A(robot)
-            
-        robot.rotate(0.0, 0.25)
+            #robot.changeOdometry(1.8,0.6,-np.pi/2)
+        
+        robot.go_to(0, 0.25, 0, 0, 0, error)
         
         print("Fin S alcanzado")
         
@@ -111,7 +118,7 @@ def main(args):
             else:
                 init_pos = next_pos
         
-        print("Fin PLAN")
+        print("Fin PLAN")"""
         
         # Red ball
         if traj_black:
@@ -120,6 +127,8 @@ def main(args):
             robot.go(3, 3, error=0.005)
             
         robot.trackObject((0,200,20),(5,255,200) , (170,200,20),(180,255,200))
+        
+        print("Fin BALL")
         
         # Logo
         robot.go(logo_pos[0], logo_pos[1], error=0.005)
