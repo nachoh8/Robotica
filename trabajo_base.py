@@ -35,8 +35,7 @@ def main(args):
     map_file = ""
 
     try:
-        #robot = Robot(init_position = [init_x, init_y, 0.0])
-        #if read_light() > 1550:
+        
         traj_black = read_light() > 1550
         traj_black = False
         if traj_black:
@@ -61,7 +60,6 @@ def main(args):
         init_y = init_pos[1] * 0.4 + 0.2
         
         robot = Robot(init_position=[init_x, init_y, 0.0])
-        myMap = Map2D(map_file)
                 
         robot.startOdometry()
 
@@ -81,19 +79,25 @@ def main(args):
             else:
                 init_pos = next_pos"""
         
-        """if traj_black:
+        if traj_black:
             _8_B(robot)
             #robot.changeOdometry(1.8,0.6,np.pi/2)
         else:
             _8_A(robot)
-            #robot.changeOdometry(1.8,0.6,-np.pi/2)
+            x,y,th = robot.readOdometry()
+            robot.changeOdometry(x,0.6,th)
         
-        robot.go_to(0, 0.25, 0, 0, 0, error)
+        # robot.go_to(0, 0.25, 0, 0, 0, error)
         
+        print(robot.readOdometry())
         print("Fin S alcanzado")
         
         # Obstacles
-        path = myMap.planPath(init_pos[0], init_pos[1], fin_pos[0], fin_pos[1])   
+        myMap = Map2D(map_file)
+        init_pos = (4,1)
+        path = myMap.planPath(init_pos[0], init_pos[1], fin_pos[0], fin_pos[1])
+        print("Camino")
+        print(path)
         while len(path) > 0:
             next_pos = path.pop(0)
             print(next_pos)
@@ -118,7 +122,11 @@ def main(args):
             else:
                 init_pos = next_pos
         
-        print("Fin PLAN")"""
+        print("Fin PLAN")
+        
+        robot.stopOdometry()
+        return
+
         
         # Red ball
         if traj_black:
@@ -133,13 +141,11 @@ def main(args):
         # Logo
         robot.go(logo_pos[0], logo_pos[1], error=0.005)
         robot.rotate(np.pi, 0.25)
-        rec = RecLogo(debug=0)
+        rec = RecLogo("P5/R2_D2.png", "P5/BB8_s.png",debug=0)
         
-        r2d2 = False
-        bb8 = False
-        while not r2d2 and not bb8:
-            r2d2 = rec.find_logo("P5/R2_D2.png")
-            bb8 = rec.find_logo("P5/BB8_s.png")
+        rec_res = 0
+        while rec_res == 0:
+            rec_res = rec.find_logos()
             time.sleep(0.1)
         
         if r2d2:

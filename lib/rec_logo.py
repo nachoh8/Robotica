@@ -8,6 +8,7 @@ from __future__ import print_function
 import argparse
 import cv2
 import numpy as np
+import sys
 import os
 import time
 
@@ -27,12 +28,15 @@ MIN_MATCH_COUNT=20          # initially
 MIN_MATCH_OBJECTFOUND=15    # after robust check, to consider object-found
 
 class RecLogo:
-    def __init__(self, debug = 1):
+    def __init__(self, img, img2 = None, debug = 1):
         self.cam = picamera.PiCamera()
 
         self.cam.resolution = (640, 480)
         self.cam.framerate = 10 # less frame rate, more light BUT needs to go slowly (or stop)
         self.rawCapture = PiRGBArray(self.cam)
+        
+        self.imReference = cv2.imread(img, cv2.IMREAD_COLOR)
+        self.imReference2 = cv2.imread(img2, cv2.IMREAD_COLOR) if img2 is not None else None
         
         self.DEBUG = debug
         
@@ -241,10 +245,10 @@ class RecLogo:
         
         cv2.destroyAllWindows()
         
-    def find_logo(self, refFilename):
+    def find_logo(self):
      
-        print("Looking for reference image : ", refFilename)
-        imReference = cv2.imread(refFilename, cv2.IMREAD_COLOR)
+        # print("Looking for reference image : ", refFilename)
+        
 
         if PI:
             print("**** processing PI-CAM image file ****")
@@ -257,11 +261,11 @@ class RecLogo:
             # frame = cv2.flip(frame, -1) # to rotate 180
             if self.DEBUG > 2:
                 cv2.imshow("Current view", frame)
-                cv2.imshow("Current target", imReference)
+                cv2.imshow("Current target", self.imReference)
                 cv2.waitKey(0)
             
             t2 = time.time()
-            found = self.match_images(imReference, frame)
+            found = self.match_images(self.imReference, frame)
             t3 = time.time()
             print("time to match %.2f" %(t3-t2))
             
@@ -282,16 +286,77 @@ class RecLogo:
         
         cv2.destroyAllWindows()
         return found
+        
+    def find_logos(self):
+     
+        # print("Looking for reference image : ", refFilename)
+        
+        if PI:
+            print("**** processing PI-CAM image file ****")
+            
+            t1 = time.time()
+            rectFound = False
+            self.cam.capture(self.rawCapture, format="bgr")
+            frame = self.rawCapture.array  
+            
+            # frame = cv2.flip(frame, -1) # to rotate 180
+            if self.DEBUG > 2:
+                cv2.imshow("Current view", frame)
+                cv2.imshow("target", self.imReference)
+                cv2.imshow("target2", self.imReference2)
+                cv2.waitKey(0)
+            
+            t2 = time.time()
+            found1 = self.match_images(self.imReference, frame)
+            t3 = time.time()
+            print("time to match1 %.2f" %(t3-t2))
+            
+            t2 = time.time()
+            found2 = self.match_images(self.imReference2, frame)
+            t3 = time.time()
+            print("time to match2 %.2f" %(t3-t2))
+            
+            self.rawCapture.truncate(0)
+                     
+            if self.DEBUG:
+                if found1 or found2:
+                    cv2.waitKey(0)    
+                k = cv2.waitKey(1) & 0xff
+                if k == letter_s:
+                    cv2.imwrite(str(time.time())+"_image.jpg", frame)
+                if k == ESC:
+                    self.cam.close()
+                
+
+        else:
+            pass
+        
+        cv2.destroyAllWindows()
+        if found1 and found2:
+            return 3
+        elif found1:
+            return 1
+        elif found2:
+            return 2
+        else:
+            return 0
 
 def main():
+    arg_i = int(sys.argv[1])
+    img = "P5/R2-D2_s.png" if arg_i == 0 else "P5/BB8_s.png"
+    print("Buscando: "+img)
     
-    rec = RecLogo(debug = 1)
     
-    if not os.path.isfile("P5/R2-D2_s.png"):
+    if not os.path.isfile(img):
             print("target template image %s does not exist" % args.robot);
             return
     else:
-        rec.find_logo("P5/R2-D2_s.png")
+        time.sleep(5)
+        rec = RecLogo(img, debug = 1)
+        fin = False
+        while not fin:
+            fin = rec.find_logo()
+            time.sleep(0.1)
 
 if __name__ == '__main__':
     """ 

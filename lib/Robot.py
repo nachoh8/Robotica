@@ -49,6 +49,7 @@ class Robot:
         
         self.BP.set_sensor_type(self.PORT_ULTRASONIC_SENSOR, self.BP.SENSOR_TYPE.EV3_ULTRASONIC_CM)
         self.BP.set_sensor_type(self.PORT_GYRO_SENSOR, self.BP.SENSOR_TYPE.CUSTOM, [(self.BP.SENSOR_CUSTOM.PIN1_ADC)])
+        #self.BP.set_sensor_type(self.PORT_GYRO_SENSOR, self.BP.TYPE_SENSOR_EV3_GYRO_M0)
         time.sleep(5)
         
         # inicializar camara // TODO
@@ -89,12 +90,13 @@ class Robot:
         self.lock_camera = Lock()
 
         self.P = 0.03 # odometry update period
-        self.P_CHECK_POS = 0.03 # chech position period
+        self.P_CHECK_POS = 0.03 # check position period
         
         # lectura previa en radianes
         self.rdMotorR_prev = 0
         self.rdMotorL_prev = 0
         
+        self.area_blob_catch = 85
         # 
         # self.encoder_timer = 0
         
@@ -279,17 +281,18 @@ class Robot:
         self.setSpeed(v,w)
         th_f_down = norm_rad(th_f - error_margin)
         th_f_up = norm_rad(th_f + error_margin)
+        print(str(th) + " - " + str(th_f_down) + " - " + str(th_f_up))
         
-        if th_f_down > 0 and th_f_up < 0 or th_f_down < 0 and th_f_up > 0:
+        if (th_f_down > 0 and th_f_up < 0) or (th_f_down < 0 and th_f_up > 0):
             while not (th > th_f_down or th < th_f_up):
                 time.sleep(self.P_CHECK_POS)
                 x,y,th = self.readOdometry()
-                print(str(x) + " | " + str(y) + " | " + str(th))
+                print("1:" + str(x) + " | " + str(y) + " | " + str(th))
         else:
             while not (th > th_f_down and th < th_f_up):
                 time.sleep(self.P_CHECK_POS)
                 x,y,th = self.readOdometry()
-                print(str(x) + " | " + str(y) + " | " + str(th))
+                print("2: " + str(x) + " | " + str(y) + " | " + str(th))
         
     def quadrant (self, th):
         if th >= 0 and th <= np.pi / 2: return 1
@@ -380,6 +383,14 @@ class Robot:
                 pass
             time.sleep(0.1)
     
+    def read_gyro(self):
+        while True:
+            try:
+                return self.BP.get_sensor(self.PORT_GYRO_SENSOR)
+            except: 
+                pass
+            time.sleep(0.1)
+
     def rotate(self, th, w, th_error_margin=0.015):
         """
         Wait until the robot reaches the position
@@ -405,17 +416,35 @@ class Robot:
            
            # Calcular th final para rotar
            v = (x_goal - x, y_goal - y)
-           th_goal = np.arctan2(v[1], v[0])
-           th_goal = norm_rad(th_goal)
+           if abs(v[0]) > abs(v[1]):
+               if v[0] >= 0.0:
+                   th_goal = error+0.0001
+               else:
+                   th_goal = -np.pi
+           else:
+               if v[1] >= 0.0:
+                   th_goal = np.pi/2
+               else:
+                   th_goal = -np.pi/2
+           # th_goal = np.arctan2(v[1], v[0])
+           #th_goal = norm_rad(th_goal)
            print("th_g: " + str(th_goal))
            
            # Rotar
            w = 0.3 * self.rotate_dir(th, th_goal)
            print("w: " + str(w))
-           self.rotate(th_goal, w)
+           #self.rotate(th_goal, w)
+           self.go_to(0.0, w, x_goal, y_goal, th_goal, error)
            
            # Avanzar
-           if self.read_ultrasonic() < 30:
+           count = 0
+           times = 3
+           for i in range(times):
+               read_ultra = self.read_ultrasonic()
+               if read_ultra < 30:
+                   count += 1
+               print("ultrasonic: " + str (i) + " | " + str(read_ultra))
+           if count == times:
                return False
            x,y,th = self.readOdometry()
            self.setSpeed(0.1,0)
@@ -424,10 +453,12 @@ class Robot:
                while abs(x_goal - x) > error:
                    time.sleep(self.P_CHECK_POS)
                    x,y,th = self.readOdometry()
+                   #print(x,y,th)
            else: # en Y
                while abs(y_goal - y) > error:
                    time.sleep(self.P_CHECK_POS)
                    x,y,th = self.readOdometry()
+                   #print(x,y,th)
                
            self.setSpeed(0,0)
            return True
@@ -459,14 +490,16 @@ class Robot:
          
         # allow the camera to warmup
         time.sleep(0.5)
-
+        size_l = 3
+        px = 320-size_l
+        py = 240-size_l
         for img in cam.capture_continuous(rawCapture, format="bgr", use_video_port=True):
 
             frame = img.array
-            frame = cv2.line(frame,(0,0),(319,0),(0,0,0),1)
-            frame = cv2.line(frame,(0,0),(0,239),(0,0,0),1)
-            frame = cv2.line(frame,(319,239),(319,0),(0,0,0),1)
-            frame = cv2.line(frame,(319,239),(0,239),(0,0,0),1)
+            frame = cv2.line(frame,(0,0),(px,0),(0,0,0),size_l)
+            frame = cv2.line(frame,(0,0),(0,py),(0,0,0),size_l)
+            frame = cv2.line(frame,(px,py),(px,0),(0,0,0),size_l)
+            frame = cv2.line(frame,(px,py),(0,py),(0,0,0),size_l)
             
             x, y, size = self.get_blobs(frame, colorRangeMin0, colorRangeMax0, colorRangeMin1, colorRangeMax1)
             self.lock_camera.acquire()
@@ -599,7 +632,7 @@ class Robot:
         Función escalón para ajustar la velocidad lineal y angular 
         a partir del tamaño y posición del blob
         """
-        a = size - 90
+        a = size - self.area_blob_catch
         if a > 0 or size == -1: v = 0
         elif a > -30: v = 0.05
         else: v = 0.15
@@ -632,18 +665,20 @@ class Robot:
             w = 1
             n = 0
             while (v != 0 or w != 0) and n < 4:
+                time.sleep(0.05)
                 x, y, size = self.getBlob()
                 if size == -1: n += 1
                 else: n = 0
                 v, w = self.calculate_speed(x, size)
                 self.setSpeed(v, w)
-                time.sleep(0.05)
             
             self.setSpeed(0,0)
             # 3. coge el objetivo
-            if size >= 90:
+            print("La cojo?")
+            if size >= self.area_blob_catch:
+                print("La coji")
                 self.setSpeed(0.05,0)
-                time.sleep(0.2)
+                time.sleep(0.7)
                 self.catch(False)
                 break  
         

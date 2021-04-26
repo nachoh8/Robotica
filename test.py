@@ -19,25 +19,10 @@ def acc(v_f, robot):
 def main():
     try:
 
-        robot = Robot() 
+        robot = Robot(init_position=[0.0,0.0,1.579]) 
         robot.startOdometry()
-        v = float(sys.argv[1])
         
-        x = 0.0
-        num_b = int(sys.argv[2])
-        for i in range(1,num_b):
-            x_f = 0.4*i
-            
-            robot.setSpeed(v, 0)
-            while x_f-x > 0:
-                time.sleep(robot.P_CHECK_POS)
-                x,y,th = robot.readOdometry()
-            
-            robot.setSpeed(0,0)
-            print("odom")
-            print(x,y,th)
-            
-            time.sleep(0.3)
+        robot.go_to(0,-0.3, 0,0,0.015000001, 0.015)
         robot.stopOdometry()
 
 
