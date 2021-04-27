@@ -7,22 +7,29 @@ import numpy as np
 import time
 from lib.Robot import Robot
 
-def acc(v_f, robot):
-    v_s = 0.01
-    v = v_s
-    while v < v_f:
-        time.sleep(0.1)
-        v += v_s
-        robot.setSpeed(v, 0.0)
-        
-
 def main():
     try:
 
-        robot = Robot(init_position=[0.0,0.0,1.579]) 
+        robot = Robot(init_position=[0.0,0.0,0.0]) 
         robot.startOdometry()
         
-        robot.go_to(0,-0.3, 0,0,0.015000001, 0.015)
+        robot.setSpeed(0.0, -0.3)
+        min_s = robot.read_ultrasonic()
+        t = 0.0
+        c = 0
+        while t < 20:
+            s = robot.read_ultrasonic()
+            print(s)
+            if s <= min_s:
+                c = 0
+                min_s = s
+            else:
+                c += 1
+
+            if c > 1:
+                break;
+            # t += 0.1
+            time.sleep(0.03)
         robot.stopOdometry()
 
 

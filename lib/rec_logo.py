@@ -28,15 +28,15 @@ MIN_MATCH_COUNT=20          # initially
 MIN_MATCH_OBJECTFOUND=15    # after robust check, to consider object-found
 
 class RecLogo:
-    def __init__(self, img, img2 = None, debug = 1):
+    def __init__(self, img_file, img2_file = None, debug = 1):
         self.cam = picamera.PiCamera()
 
         self.cam.resolution = (640, 480)
         self.cam.framerate = 10 # less frame rate, more light BUT needs to go slowly (or stop)
         self.rawCapture = PiRGBArray(self.cam)
         
-        self.imReference = cv2.imread(img, cv2.IMREAD_COLOR)
-        self.imReference2 = cv2.imread(img2, cv2.IMREAD_COLOR) if img2 is not None else None
+        self.imReference = cv2.imread(img_file, cv2.IMREAD_COLOR)
+        self.imReference2 = cv2.imread(img2_file, cv2.IMREAD_COLOR) if img2_file is not None else None
         
         self.DEBUG = debug
         
@@ -326,8 +326,6 @@ class RecLogo:
                     cv2.imwrite(str(time.time())+"_image.jpg", frame)
                 if k == ESC:
                     self.cam.close()
-                
-
         else:
             pass
         
@@ -341,25 +339,25 @@ class RecLogo:
         else:
             return 0
 
+"""
 def main():
-    arg_i = int(sys.argv[1])
-    img = "P5/R2-D2_s.png" if arg_i == 0 else "P5/BB8_s.png"
-    print("Buscando: "+img)
-    
-    
-    if not os.path.isfile(img):
-            print("target template image %s does not exist" % args.robot);
-            return
-    else:
-        time.sleep(5)
-        rec = RecLogo(img, debug = 1)
-        fin = False
-        while not fin:
-            fin = rec.find_logo()
-            time.sleep(0.1)
-
+    img1 = "/home/pi/Robotica/P5/R2-D2_s.png"
+    img2 = "/home/pi/Robotica/P5/BB8_s.png"
+    if not os.path.isfile(img1):
+        print("image " + img1 + " mal");
+        return
+    if not os.path.isfile(img2):
+        print("image " + img2 + " mal");
+        return
+    rec = RecLogo(img1, img2, debug=4)
+    rec_res = 0
+    while rec_res == 0:
+        rec_res = rec.find_logos()
+        time.sleep(0.1)
+    print(rec_res)
 if __name__ == '__main__':
-    """ 
+    
     Match input image or current life video feed with the selected template
-    """
+    
     main()
+"""

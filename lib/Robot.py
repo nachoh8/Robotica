@@ -268,7 +268,7 @@ class Robot:
         self.setSpeed(0,0)
         self.BP.reset_all()
     
-    def go_to(self, v:float, w:float, x_f: float, y_f:float, th_f: float, error_margin: float):
+    def go_to_old(self, v:float, w:float, x_f: float, y_f:float, th_f: float, error_margin: float):
         """
         Move to [x_f,y_f,th_f] position with speed [v,w]
         - v: Linear Speed m/s
@@ -293,27 +293,7 @@ class Robot:
                 time.sleep(self.P_CHECK_POS)
                 x,y,th = self.readOdometry()
                 print("2: " + str(x) + " | " + str(y) + " | " + str(th))
-        
-    def quadrant (self, th):
-        if th >= 0 and th <= np.pi / 2: return 1
-        elif th > np.pi / 2 and th <= np.pi: return 2
-        elif th >= -np.pi and th < -np.pi / 2: return 3
-        else: return 4
-        
-    """
-    def rotate_dir (self, th_i, th_f):        
-        q_i = self.quadrant(th_i)
-        q_f = self.quadrant(th_f)
-        df_q = q_f - q_i
-        
-        if abs(df_q) == 1: return df_q / abs(df_q)
-        elif abs(df_q) == 3: return -df_q / abs(df_q)
-        elif abs(df_q) == 2: return -1
-        else:
-            df_th = th_f - th_i
-            if df_th == 0: return 0
-            return df_th / abs(df_th)
-    """
+    
     def rotate_dir (self, th_i, th_f):
         if abs(abs(th_i)-abs(th_f)) < 0.000001: return 0
           
@@ -334,47 +314,6 @@ class Robot:
         else: # th_i == 0:
             return 1 if th_f > 0 else -1
     
-    def rotate_dir_v2(self, dx, dy, th):
-        beta = norm_rad(np.arctan2(dy, dx)+np.pi)
-        alfa = beta - th
-        print(beta)
-        print(alfa)
-        print(0.5*alfa+0.5*beta)
-            
-    
-    def rotate1 (self, th, th_f, w, error_margin=0.01):
-        th_f_down = norm_rad(th_f - error_margin)
-        th_f_up = norm_rad(th_f + error_margin)
-        
-        self.setSpeed(0,w)
-        if th_f_down > 0 and th_f_up < 0 or th_f_down < 0 and th_f_up > 0:
-            #while not (th > th_f_down or th < th_f_up):
-                #time.sleep(self.P_CHECK_POS)
-                #x,y,th = self.readOdometry()
-            if th_f_down <= 0:
-                while not (th < th_f_up and th > th_f_down):
-                    time.sleep(self.P_CHECK_POS)
-                    x,y,th = self.readOdometry()
-            else:
-                while not (th < th_f_up or th > th_f_down):
-                    time.sleep(self.P_CHECK_POS)
-                    x,y,th = self.readOdometry()
-                
-        else:
-            while not (th > th_f_down and th < th_f_up):
-                time.sleep(self.P_CHECK_POS)
-                x,y,th = self.readOdometry()
-        
-        self.setSpeed(0,0)
-    
-    def rotate2 (self, th, th_f, w, error_margin=0.01):
-        if w == 0: return
-        
-        if w > 0:
-            pass
-        
-        self.setSpeed(0,0)
-        
     def read_ultrasonic(self):
         while True:
             try:
@@ -391,26 +330,36 @@ class Robot:
                 pass
             time.sleep(0.1)
 
-    def rotate(self, th, w, th_error_margin=0.015):
-        """
-        Wait until the robot reaches the position
-        :param th_error_margin: error allowed in the orientation
-        """
-        self.setSpeed(0.0,w)
-        [_, _, th_odo] = self.readOdometry()
+    def dist_angulos(self, w:float, th:float, th_f: float):
+        if self.rotate_dir(th, th_f) != w / abs(w): return -0.01
+        
+        if w > 0.0:
+            if (th >= 0 and th_f >= 0) or (th <= 0 and th_f <= 0):
+                return th_f - th
+            elif th > 0 and th_f < 0:
+                return (np.pi - th) + (np.pi + th_f)
+            elif th < 0 and th_f > 0:
+                return abs(th) + th_f
+        elif w < 0.0:
+            if (th >= 0 and th_f >= 0) or (th <= 0 and th_f <= 0):
+                return th - th_f
+            elif th > 0 and th_f < 0:
+                return th + abs(th_f)
+            elif th < 0 and th_f > 0:
+                return (np.pi + th) + (np.pi - th_f)
 
-        # Repeat while error decrease
-        last_error = abs(norm_rad(th - th_odo))
-        actual_error = last_error
-        while th_error_margin < actual_error:
-            last_error = actual_error
-            while last_error >= actual_error:
-                [_, _, th_odo] = self.readOdometry()
-                last_error = actual_error
-                actual_error = abs(norm_rad(th - th_odo))
-                time.sleep(self.P_CHECK_POS)
-        self.setSpeed(0.0,0.0)
-                
+    def go_to(self, v:float, w:float, x_f: float, y_f:float, th_f: float,error_margin: float):
+
+        x, y, th = self.readOdometry()
+        self.setSpeed(v,w)
+        d = self.dist_angulos(w, th, th_f)
+        print(d)
+        while d > 0.0:
+            time.sleep(self.P_CHECK_POS)
+            x, y, th = self.readOdometry()
+            d = self.dist_angulos(w, th, th_f)
+            #print("Rotating: " + str(x) + " | " + str(y) + " | " + str(th) + " | " + str(d))
+    
     def go(self, x_goal, y_goal, error=0.015):
            x,y,th = self.readOdometry()
            
@@ -418,7 +367,7 @@ class Robot:
            v = (x_goal - x, y_goal - y)
            if abs(v[0]) > abs(v[1]):
                if v[0] >= 0.0:
-                   th_goal = error+0.0001
+                   th_goal = 0.0 #error+0.0001
                else:
                    th_goal = -np.pi
            else:
@@ -434,6 +383,7 @@ class Robot:
            w = 0.3 * self.rotate_dir(th, th_goal)
            print("w: " + str(w))
            #self.rotate(th_goal, w)
+           
            self.go_to(0.0, w, x_goal, y_goal, th_goal, error)
            
            # Avanzar
@@ -443,7 +393,7 @@ class Robot:
                read_ultra = self.read_ultrasonic()
                if read_ultra < 30:
                    count += 1
-               print("ultrasonic: " + str (i) + " | " + str(read_ultra))
+               # print("ultrasonic: " + str (i) + " | " + str(read_ultra))
            if count == times:
                return False
            x,y,th = self.readOdometry()
@@ -460,7 +410,7 @@ class Robot:
                    x,y,th = self.readOdometry()
                    #print(x,y,th)
                
-           self.setSpeed(0,0)
+           # self.setSpeed(0,0)
            return True
                                
     def catch (self, up:bool):
@@ -635,13 +585,13 @@ class Robot:
         a = size - self.area_blob_catch
         if a > 0 or size == -1: v = 0
         elif a > -30: v = 0.05
-        else: v = 0.15
+        else: v = 0.1
         
         w = self.orientate(x) # corrección error
         return v, w
         
         
-    def trackObject(self, colorRangeMin0:tuple, colorRangeMax0:tuple, colorRangeMin1:tuple, colorRangeMax1:tuple):
+    def trackObject(self, colorRangeMin0:tuple, colorRangeMax0:tuple, colorRangeMin1:tuple, colorRangeMax1:tuple, turn_right:bool):
         """
         Busca y captura el objetivo (pelota roja) en tres pasos:
         1. Gira sobre sí mismo hasta encontrar el primer blob
@@ -651,13 +601,15 @@ class Robot:
         self.p_camera = Process(target=self.camera, args=(colorRangeMin0, colorRangeMax0, colorRangeMin1, colorRangeMax1))
         self.p_camera.start()
         
+        w_dir = -1 if turn_right else 1
+        
         while not self.finished.value:
             x, y, size = self.getBlob()
             
             # 1. buscar y orientar a blob             
             while size == -1:
                 x, y, size = self.getBlob()
-                self.setSpeed(0, 0.5)  
+                self.setSpeed(0, 0.5*w_dir)  
                 time.sleep(0.05)
             
             # 3. avanzar hacia objetivo
