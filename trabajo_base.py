@@ -12,6 +12,8 @@ from lib.rec_logo import RecLogo
 
 error = 0.015
 
+
+
 def ceil_to_odom(ceil):
     return (ceil[0] * 0.4 + 0.2, ceil[1] * 0.4 + 0.2)
 
@@ -19,19 +21,23 @@ def odom_to_cell(odom):
     return (int(odom[0] / 0.4 - 0.2), int(odom[1] / 0.4 - 0.2))
 
 def _8_A(robot):
-    robot.go_to(0, -0.25, 0, 0, -np.pi/2, error)
-    robot.go_to(0.1, 0.28, 0, 0, np.pi/2, error)
-    robot.setSpeed(0.1,0.25)
-    time.sleep(0.9)
-    robot.go_to(0.1, -0.25, 0, 0, -np.pi/2, error)
+    robot.go_to(0, -0.3, 0, 0, -np.pi/2, error, manual=True)
+    print(robot.readOdometry())
+    robot.go_to(0.12, 0.3, 0, 0, np.pi/2, error, manual=True)
+    print(robot.readOdometry())
+    robot.setSpeed(0.12,0.3)
+    time.sleep(0.7)
+    print(robot.readOdometry())
+    robot.go_to(0.12, -0.3, 0, 0, -np.pi/2, error, manual=True)
 
 def _8_B(robot):
     robot.go_to(0, 0.25, 0, 0, np.pi/2, error)
     robot.go_to(0.1, -0.25, 0, 0, -np.pi/2, error)
     robot.go_to(0.1, 0.25, 0, 0, np.pi/2, error)
 
-def execute_plan(robot, myMap, init_pos, fin_pos):
-    path = myMap.planPath(init_pos[0], init_pos[1], fin_pos[0], fin_pos[1])
+def execute_plan(robot, myMap, init_pos, fin_pos, path=None):
+    if path is None:
+        path = myMap.planPath(init_pos[0], init_pos[1], fin_pos[0], fin_pos[1])
     print(path)
     
     while len(path) > 0:
@@ -66,12 +72,19 @@ def main(args):
     path = []
     init_pos = None
     fin_pos = None
-    logo_pos = None
     see_ball_pos = None
     fin_dch = (0,6)
     fin_izq = (0,3)
+    fin_recorrido_1 = None
+    fin_recorrido_2 = None
     map_file = ""
-
+    
+    logo_pos_izq = (1,4)
+    logo_pos_drch = (1,5)
+    logo_pos_1 = None
+    logo_pos_2 = None
+    logo_rec = ""
+    
     try:
         
         traj_black = read_light() > 1550
@@ -84,22 +97,29 @@ def main(args):
             path = [(0,0), (1,0), (2,0), (2,1), (2,2), (3,2), (4,2), (4,1)] # TODO
             map_file = "P5/mapaB_CARRERA.txt"
             see_ball_pos = (3,6)
-            logo_pos = (0,5)
-            
+            logo_rec = "/home/pi/Robotica/P5/BB8_s.png"
+            fin_recorrido_1 = fin_dch
+            fin_recorrido_2 = fin_izq
+            logo_pos_1 = logo_pos_drch
+            logo_pos_2 = logo_pos_izq
         else:
             # blanco
             print("blanco")
-            init_pos = (3,3)
+            init_pos = (0,1)
             fin_pos = (4,3)
             path = [(0,0), (1,0), (2,0), (2,1), (2,2), (3,2), (4,2), (4,1)]
             map_file = "P5/mapaA_CARRERA.txt"
-            see_ball_pos = (2,4)
-            logo_pos = (1,4)
+            see_ball_pos = (3,4)
+            logo_rec = "/home/pi/Robotica/P5/R2-D2_s.png"
+            fin_recorrido_2 = fin_dch
+            fin_recorrido_1 = fin_izq
+            logo_pos_2 = logo_pos_drch
+            logo_pos_1 = logo_pos_izq
             
         init_x = init_pos[0] * 0.4 + 0.2
         init_y = init_pos[1] * 0.4 + 0.2
         
-        robot = Robot(init_position=[init_x, init_y, -np.pi])
+        robot = Robot(init_position=[init_x, init_y, 0.0]) # -np.pi
         myMap = Map2D(map_file)
         
         robot.startOdometry()
@@ -121,14 +141,14 @@ def main(args):
             else:
                 init_pos = next_pos
         """
-        """
+        
         if traj_black:
             _8_B(robot)
             #robot.changeOdometry(1.8,0.6,np.pi/2)
         else:
             _8_A(robot)
             x,y,th = robot.readOdometry()
-            robot.changeOdometry(x,0.6,th)
+            robot.changeOdometry(x,0.6,-1.7)
         
         # robot.go_to(0, 0.25, 0, 0, 0, error)
         
@@ -136,18 +156,17 @@ def main(args):
         print("Fin S alcanzado")
         
         # Obstacles
-        
         init_pos = (4,1)
         # path = myMap.planPath(init_pos[0], init_pos[1], fin_pos[0], fin_pos[1])
-        execute_plan(robot, myMapn, init_pos, fin_pos)
-        """
+        execute_plan(robot, myMap, init_pos, fin_pos)
+        
         print(robot.readOdometry())
         print("Fin PLAN")
         
         
         # Red ball
         pos_f = ceil_to_odom(see_ball_pos)
-        #robot.go(pos_f[0], pos_f[1], error=0.005)
+        robot.go(pos_f[0], pos_f[1], error=0.005)
             
         robot.trackObject((0,200,20),(5,255,200) , (170,200,20),(180,255,200), not traj_black)
         
@@ -155,43 +174,58 @@ def main(args):
         print("Fin BALL")
         
         # Logo
-        pos_f = ceil_to_odom(logo_pos)
-        #robot.go(pos_f[0], pos_f[1], error=0.005)
         odom = robot.readOdometry()
         odom_cell = odom_to_cell(odom)
         print(odom, odom_cell)
-        execute_plan(robot, myMap, odom_cell, logo_pos)
+        
+        execute_plan(robot, myMap, odom_cell, logo_pos_1)
         robot.go_to(0.0, -0.3, 0.0, 0.0, -np.pi, 0.005)
         robot.setSpeed(0.0, 0.0)
-        # robot.setSpeed(0.0, 0.0)
+        
         print(robot.readOdometry())
         print("A reconocer")
-        #robot.go_to(0.0, -0.3, 0.0, 0.0, np.pi, 0.005)
-        rec = RecLogo("/home/pi/Robotica/P5/R2-D2_s.png", "/home/pi/Robotica/P5/BB8_s.png",debug=0)
         
-        rec_res = 0
-        while rec_res == 0:
-            rec_res = rec.find_logos()
-            time.sleep(0.1)
+        rec = RecLogo(logo_rec)
         
-        if rec_res == 1:
-            pos_f = fin_izq
-        else:
-            pos_f = fin_dch
-        
+        found = rec.find_logo()
+
         odom = robot.readOdometry()
         odom_cell = odom_to_cell(odom)
         print(odom, odom_cell)
-        print("Fin reconocer " + str(rec_res))
-        #robot.go(pos_f[0], pos_f[1], error=0.005)
+        
+        if found:
+            pos_f = fin_recorrido_1
+        else:
+            print("A reconocer en la otra posicion")
+            execute_plan(robot, myMap, odom_cell, logo_pos_2)
+            robot.go_to(0.0, -0.3, 0.0, 0.0, -np.pi, 0.005)
+            robot.setSpeed(0.0, 0.0)
+            
+            found = rec.find_logo()
+            odom = robot.readOdometry()
+            odom_cell = odom_to_cell(odom)
+            print(odom, odom_cell)
+            
+            pos_f = fin_recorrido_2
+        
+
+        print("Fin reconocer")
+        
         execute_plan(robot, myMap, odom_cell, pos_f)
         robot.setSpeed(0.0, 0.0)
+        
         # Salir por la puerta
         print(robot.readOdometry())
+        
         robot.go_to(0.0, -0.3, 0.0, 0.0, np.pi, 0.005)
         print(robot.readOdometry())
+        
+        pos_f = ceil_to_odom(pos_f)
         robot.go(pos_f[0] - 0.4, pos_f[1], error=0.005)
         robot.setSpeed(0.0, 0.0)
+        
+        print("Meta alcanzada")
+        
         robot.stopOdometry()
 
 

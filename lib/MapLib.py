@@ -466,19 +466,19 @@ class Map2D:
         while min_cost > 0:
             x, y = current_cell
             best = None
-
-            if x + 1 < self.sizeX_e and self.costMatrix[x + 1][y] != -1 and self.costMatrix[x + 1][y] < min_cost:
-                min_cost = self.costMatrix[x + 2][y]
-                best = (x + 2, y)
-            if x - 1 >= 0 and self.costMatrix[x - 1][y] != -1 and self.costMatrix[x - 1][y] < min_cost:
-                min_cost = self.costMatrix[x - 2][y]
-                best = (x - 2, y)
+            
             if y + 1 < self.sizeY_e and self.costMatrix[x][y + 1] != -1 and self.costMatrix[x][y + 1] < min_cost:
                 min_cost = self.costMatrix[x][y + 2]
                 best = (x, y + 2)
             if y - 1 >= 0 and self.costMatrix[x][y - 1] != -1 and self.costMatrix[x][y - 1] < min_cost:
                 min_cost = self.costMatrix[x][y - 2]
                 best = (x, y - 2)
+            if x + 1 < self.sizeX_e and self.costMatrix[x + 1][y] != -1 and self.costMatrix[x + 1][y] < min_cost:
+                min_cost = self.costMatrix[x + 2][y]
+                best = (x + 2, y)
+            if x - 1 >= 0 and self.costMatrix[x - 1][y] != -1 and self.costMatrix[x - 1][y] < min_cost:
+                min_cost = self.costMatrix[x - 2][y]
+                best = (x - 2, y)
             
             if best is None:
                 min_cost = -1

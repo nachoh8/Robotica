@@ -28,7 +28,7 @@ MIN_MATCH_COUNT=20          # initially
 MIN_MATCH_OBJECTFOUND=15    # after robust check, to consider object-found
 
 class RecLogo:
-    def __init__(self, img_file, img2_file = None, debug = 1):
+    def __init__(self, img_file, img2_file = None, debug = 0):
         self.cam = picamera.PiCamera()
 
         self.cam.resolution = (640, 480)
@@ -245,7 +245,7 @@ class RecLogo:
         
         cv2.destroyAllWindows()
         
-    def find_logo(self):
+    def find_logo2(self):
      
         # print("Looking for reference image : ", refFilename)
         
@@ -303,7 +303,7 @@ class RecLogo:
             if self.DEBUG > 2:
                 cv2.imshow("Current view", frame)
                 cv2.imshow("target", self.imReference)
-                cv2.imshow("target2", self.imReference2)
+                if self.imReference2 is not None: cv2.imshow("target2", self.imReference2)
                 cv2.waitKey(0)
             
             t2 = time.time()
@@ -311,10 +311,13 @@ class RecLogo:
             t3 = time.time()
             print("time to match1 %.2f" %(t3-t2))
             
-            t2 = time.time()
-            found2 = self.match_images(self.imReference2, frame)
-            t3 = time.time()
-            print("time to match2 %.2f" %(t3-t2))
+            if self.imReference2 is not None:
+                t2 = time.time()
+                found2 = self.match_images(self.imReference2, frame)
+                t3 = time.time()
+                print("time to match2 %.2f" %(t3-t2))
+            else:
+                found2 = False
             
             self.rawCapture.truncate(0)
                      
@@ -338,6 +341,16 @@ class RecLogo:
             return 2
         else:
             return 0
+    
+    def find_logo(self, idx = 1):
+        rec_res = 0
+        t = 0.0
+        while rec_res != 1 and t < 1.5:
+            rec_res = self.find_logos()
+            t += 0.1
+            time.sleep(0.1)
+        
+        return rec_res == idx or rec_res == 3
 
 """
 def main():
