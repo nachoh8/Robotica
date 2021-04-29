@@ -40,7 +40,10 @@ def hom(xWR: np.array) -> np.array:
 
 def loc(tWR: np.array) -> np.array:
   return np.array([tWR[0][2], tWR[1][2], np.arctan2(tWR[1][0], tWR[0][0])])
-  
+
+def norm_rad_to_degrees(rads: float):
+  return math.degrees(rads) % 360
+
 def read_light():
   import time
   import brickpi3

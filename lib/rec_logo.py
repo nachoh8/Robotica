@@ -344,10 +344,11 @@ class RecLogo:
     
     def find_logo(self, idx = 1):
         rec_res = 0
-        t = 0.0
-        while rec_res != 1 and t < 1.5:
+        t = 0
+        while rec_res != 1 and t < 10:
+            #print(rec_res, t)
             rec_res = self.find_logos()
-            t += 0.1
+            t += 1
             time.sleep(0.1)
         
         return rec_res == idx or rec_res == 3
@@ -362,15 +363,12 @@ def main():
     if not os.path.isfile(img2):
         print("image " + img2 + " mal");
         return
-    rec = RecLogo(img1, img2, debug=4)
-    rec_res = 0
-    while rec_res == 0:
-        rec_res = rec.find_logos()
-        time.sleep(0.1)
-    print(rec_res)
+    rec = RecLogo(img1)
+        
+    print(rec.find_logo())
 if __name__ == '__main__':
     
-    Match input image or current life video feed with the selected template
+    #Match input image or current life video feed with the selected template
     
     main()
 """

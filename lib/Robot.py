@@ -12,7 +12,7 @@ from picamera.array import PiRGBArray
 
 import numpy as np
 
-from lib.utils import norm_rad, norm_pi
+from lib.utils import norm_rad, norm_pi, norm_rad_to_degrees
 
 
 debug = False
@@ -77,6 +77,7 @@ class Robot:
         self.x = Value('d',init_position[0])
         self.y = Value('d',init_position[1])
         self.th = Value('d',init_position[2])
+        self.change_odom = Value('b', False)
         self.finished = Value('b',1) # boolean to show if odometry updates are finished
         
         self.v = Value('d',0.0) # esto solo sirve para el modo debug
@@ -235,9 +236,12 @@ class Robot:
 
             # update odometry values
             self.lock_odometry.acquire()
-            self.x.value = x
-            self.y.value = y
-            self.th.value = th_f
+            if self.change_odom.value:
+                self.change_odom.value = False
+            else:
+                self.x.value = x
+                self.y.value = y
+                self.th.value = th_f
             
             self.lock_odometry.release()
             
@@ -257,86 +261,15 @@ class Robot:
         log_file.close()
         sys.stdout.write("Stopping odometry ... X=  %.2f, \
                 Y=  %.2f, th=  %.2f \n" %(self.x.value, self.y.value, self.th.value))
-    """
-    def updateOdometry(self):
-        Updae the odomery every self.P seconds 
-        log_file = open(self.log_file_name, "w+")
-        log_file.write("x,y,th\n")
-        t_count = 0
-
-        while not self.finished.value:
-            # current processor time in a floating point value, in seconds
-            tIni = time.clock()
-
-            # compute updates
-            x,y,th = self.readOdometry()
-            
-            v,w = self.readSpeed()
-
-            th_f = 0
-            #gyro = -(self.read_gyro() - GYRO_OFFSET) * MAGIC_NUMBER
-            #w = (w + norm_pi(gyro)) / 2.0
-            if w == 0: # moviemiento recto
-                x += self.P * v * math.cos(th)
-                y += self.P * v * math.sin(th)
-                th_f = th
-                
-            else: # movimiento circular
-                div = v/w
-                th_aux = norm_rad(th + w * self.P)
-                x += div * (math.sin(th_aux) - math.sin(th))
-                y -= div * (math.cos(th_aux) - math.cos(th))
-                th_f = th_aux
-            
-            print(w, x, y, th_f)
-            try:
-                gyro = -(self.BP.get_sensor(self.BP.PORT_3)[0] - 2430) * 0.14 * self.P
-                print("w: " + str(w) + " | " + str(gyro))
-                w = (w + gyro) / 2.0
-                print("w_f: " + str(w))
-                th_f = norm_rad(th + w * self.P)
-                # print(gyro, actual_value_gyro_1)   # print the gyro sensor values
-                
-            except brickpi3.SensorError as error:
-                # print(error)
-                th_f = norm_rad(th)
-                
-
-            # update odometry values
-            self.lock_odometry.acquire()
-            self.x.value = x
-            self.y.value = y
-            self.th.value = th_f
-            
-            self.lock_odometry.release()
-            
-            t_count += 1
-            try:
-                if t_count == 10: # writes every 0,3 seconds
-                    t_count = 0
-                    log_file.write(str(x) + "," + str(y) + "," + str(th_f) + "\n")
-            except IOError as error:
-                #print(error)
-                sys.stdout.write(error)
-
-
-            tEnd = time.clock()
-            time.sleep(self.P - (tEnd-tIni))
-        
-        log_file.close()
-        sys.stdout.write("Stopping odometry ... X=  %.2f, \
-                Y=  %.2f, th=  %.2f \n" %(self.x.value, self.y.value, self.th.value))
-    """
+    
     def changeOdometry(self, x, y, th):
-        t = 0
-        while t < 3: 
-            self.lock_odometry.acquire()
-            self.x.value = x
-            self.y.value = y
-            self.th.value = th
-            self.lock_odometry.release()
-            t += 1
-            time.sleep(0.03)
+        self.lock_odometry.acquire()
+        self.change_odom.value = True
+        self.x.value = x
+        self.y.value = y
+        self.th.value = th
+        self.lock_odometry.release()
+        
 
     # Stop the odometry thread.
     def stopOdometry(self):
@@ -346,33 +279,34 @@ class Robot:
         self.setSpeed(0,0)
         self.BP.reset_all()
     
-    def go_to_old(self, v:float, w:float, x_f: float, y_f:float, th_f: float, error_margin: float):
-        """
-        Move to [x_f,y_f,th_f] position with speed [v,w]
-        - v: Linear Speed m/s
-        - w: Angular Speed rad/s
-        - x_f: X Position in m
-        - y_f: Y Position in m
-        - th_f: Angle in rad
-        """
-        x, y, th = self.readOdometry()
-        self.setSpeed(v,w)
-        th_f_down = norm_rad(th_f - error_margin)
-        th_f_up = norm_rad(th_f + error_margin)
-        print(str(th) + " - " + str(th_f_down) + " - " + str(th_f_up))
+    def rotate_dir(self, th, th_f):
+        if abs(th-th_f) <= 1: return 0
         
-        if (th_f_down > 0 and th_f_up < 0) or (th_f_down < 0 and th_f_up > 0):
-            while not (th > th_f_down or th < th_f_up):
-                time.sleep(self.P_CHECK_POS)
-                x,y,th = self.readOdometry()
-                print("1:" + str(x) + " | " + str(y) + " | " + str(th))
+        if th_f > th:
+            d_izq = th_f - th
         else:
-            while not (th > th_f_down and th < th_f_up):
-                time.sleep(self.P_CHECK_POS)
-                x,y,th = self.readOdometry()
-                print("2: " + str(x) + " | " + str(y) + " | " + str(th))
+            aux_M = max(th_f, th)
+            aux_m = min(th_f, th)
+            d_izq = 360 - aux_M + aux_m
+        print()
+        return 1 if d_izq <= 180 else -1
     
-    def rotate_dir (self, th_i, th_f):
+    def rotate(self, w, th_f, v = 0.0, dir_w=True):
+        th_f = norm_rad_to_degrees(th_f)
+        _,_,th = self.readOdometry()
+        th = norm_rad_to_degrees(th)
+
+        if dir_w: w = w * self.rotate_dir(th, th_f)
+        print(th, th_f,w)
+        if w == 0: return
+        self.setSpeed(v, w)
+        while abs(th_f - th) >= 1:
+            time.sleep(self.P_CHECK_POS)
+            _, _, th = self.readOdometry()
+            th = norm_rad_to_degrees(th)
+            
+        
+    def rotate_dir_old (self, th_i, th_f):
         if abs(abs(th_i)-abs(th_f)) < 0.000001: return 0
           
         if (th_i > 0 and th_f > 0) or (th_i < 0 and th_f < 0):
@@ -407,7 +341,7 @@ class Robot:
             except: 
                 pass
             time.sleep(0.02)
-
+    
     def dist_angulos(self, w:float, th:float, th_f: float, manual:bool):
         if (not manual) and self.rotate_dir(th, th_f) != w / abs(w): return -0.01
         
@@ -459,11 +393,11 @@ class Robot:
            print("th_g: " + str(th_goal))
            
            # Rotar
-           w = 0.3 * self.rotate_dir(th, th_goal)
-           print("w: " + str(w))
-           #self.rotate(th_goal, w)
+           #w = 0.3 * self.rotate_dir(th, th_goal)
+           #print("w: " + str(w))
+           self.rotate(0.3, th_goal)
            
-           self.go_to(0.0, w, x_goal, y_goal, th_goal, error)
+           #self.go_to(0.0, w, x_goal, y_goal, th_goal, error)
            
            # Avanzar
            count = 0
@@ -689,7 +623,7 @@ class Robot:
             # 1. buscar y orientar a blob             
             while size == -1:
                 x, y, size = self.getBlob()
-                self.setSpeed(0, 0.5*w_dir)  
+                self.setSpeed(0, 0.3*w_dir)  
                 time.sleep(0.05)
             
             # 3. avanzar hacia objetivo
@@ -715,4 +649,63 @@ class Robot:
                 break  
         
         self.p_camera.terminate()
+        
+    def take_dis(self, error, reads):
+        r = self.read_ultrasonic()
+        times = 1
+        while times < reads:
+            r_aux = self.read_ultrasonic()
+            if r < r_aux + error and r > r_aux - error:
+                times += 1
+            else:
+                times = 0
+                r = r_aux
+            time.sleep(0.05)
+        return r
+
+    def barrido (self, rotate_dch, margin, error):
+        centrando = True
+        reads = 6
+        min_r = self.take_dis(error, reads) # medicion inicial
+        ant = min_r
+        while centrando:
+            x, y, th = self.readOdometry()
+            # Rotar un poco
+            if rotate_dch:
+                self.rotate(-0.3, th - margin, dir_w=False)
+            else:
+                self.rotate(0.3, th + margin, dir_w=False)
+            self.setSpeed(0,0)
+        
+            aux = self.take_dis(error, reads) # lectura distancia
+            print(min_r, ant, aux)
+            if aux < min_r: # se va centrando
+                min_r = aux
+                ant = aux
+            elif ant < aux: # se descentra
+                centrando = False
+                # deshace lo rotado
+                if rotate_dch:
+                    self.rotate(0.3, th + margin, dir_w=False)
+                else:
+                    self.rotate(-0.3, th - margin, dir_w=False)
+                self.setSpeed(0,0)
+
+    def check_th (self, margin, error):
+        x, y,th = self.readOdometry() # guardamos hacia donde mira
+        self.barrido(True, margin, error) # barrido derecha rotando "margin" rad y margen de error en lecturas de 0.3 cm
+        self.barrido(False, margin, error)
+        
+        objs = [0.0, 90, 180, 270]
+        dist = 400
+        th_obj = None
+        th_d = norm_rad_to_degrees(th)
+        for obj in objs:
+            d = abs(th_d - obj)
+            if d < dist:
+                dist = d
+                th_obj = obj
+        
+        self.changeOdometry(x,y, norm_pi(th_obj))
+
         

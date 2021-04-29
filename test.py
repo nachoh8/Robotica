@@ -41,20 +41,14 @@ def main():
     
     try:
 
-        robot = Robot(init_position=[0.0,0.0,0.0]) 
+        robot = Robot(init_position=[0.0,0.0,-0.0807]) 
         #p_gyro = Process(target=print_gyro, args=(robot,1))
         #p_gyro.start()
-        
+        W_ROBOT = 0.3
+        V_ROBOT = 0.12
         robot.startOdometry()
-        error = 00.5
-        
-        robot.go_to(0, 0.3, 0, 0, np.pi/2, error)
-        robot.setSpeed(0.0,0.0)
-        print(robot.readOdometry())
-        time.sleep(2)
-        robot.go_to(0.0, -0.3, 0, 0, 0.0, error)
-        print(robot.readOdometry())
-        robot.setSpeed(0.0,0.0)
+        robot.rotate(W_ROBOT, np.pi/2)
+        robot.setSpeed(0,0)
         
         robot.stopOdometry()
 

@@ -12,6 +12,8 @@ from lib.rec_logo import RecLogo
 
 error = 0.015
 
+W_ROBOT = 0.3
+V_ROBOT = 0.12
 
 
 def ceil_to_odom(ceil):
@@ -21,14 +23,18 @@ def odom_to_cell(odom):
     return (int(odom[0] / 0.4 - 0.2), int(odom[1] / 0.4 - 0.2))
 
 def _8_A(robot):
-    robot.go_to(0, -0.3, 0, 0, -np.pi/2, error, manual=True)
+    #robot.go_to(0, -0.3, 0, 0, -np.pi/2, error, manual=True)
+    robot.rotate(-W_ROBOT, -np.pi/2, dir_w=False)
     print(robot.readOdometry())
-    robot.go_to(0.12, 0.3, 0, 0, np.pi/2, error, manual=True)
+    #robot.go_to(0.12, 0.3, 0, 0, np.pi/2, error, manual=True)
+    robot.rotate(W_ROBOT, np.pi/2, v=V_ROBOT, dir_w=False)
     print(robot.readOdometry())
-    robot.setSpeed(0.12,0.3)
+    robot.setSpeed(V_ROBOT,W_ROBOT)
     time.sleep(0.7)
     print(robot.readOdometry())
-    robot.go_to(0.12, -0.3, 0, 0, -np.pi/2, error, manual=True)
+    #robot.go_to(0.12, -0.3, 0, 0, -np.pi/2, error, manual=True)
+    robot.rotate(-W_ROBOT, -np.pi/2, v=V_ROBOT, dir_w=False)
+    
 
 def _8_B(robot):
     robot.go_to(0, 0.25, 0, 0, np.pi/2, error)
@@ -54,6 +60,9 @@ def execute_plan(robot, myMap, init_pos, fin_pos, path=None):
             neigh = myMap.get_numneigh(dir_pos[0], dir_pos[1])
             for n in neigh:
                 myMap.deleteConnection(init_pos[0], init_pos[1], n)
+            
+            # recalcular posicion
+            robot.check_th(0.05, 0.2)
             
             # Volver a planear la ruta
             path = myMap.planPath(init_pos[0], init_pos[1], fin_pos[0], fin_pos[1])
@@ -109,7 +118,7 @@ def main(args):
             fin_pos = (4,3)
             path = [(0,0), (1,0), (2,0), (2,1), (2,2), (3,2), (4,2), (4,1)]
             map_file = "P5/mapaA_CARRERA.txt"
-            see_ball_pos = (3,4)
+            see_ball_pos = (3,3)
             logo_rec = "/home/pi/Robotica/P5/R2-D2_s.png"
             fin_recorrido_2 = fin_dch
             fin_recorrido_1 = fin_izq
@@ -148,10 +157,8 @@ def main(args):
         else:
             _8_A(robot)
             x,y,th = robot.readOdometry()
-            robot.changeOdometry(x,0.6,-1.7)
-        
-        # robot.go_to(0, 0.25, 0, 0, 0, error)
-        
+            robot.changeOdometry(x,0.6,th)
+        robot.setSpeed(0.0, 0.0)
         print(robot.readOdometry())
         print("Fin S alcanzado")
         
@@ -179,7 +186,8 @@ def main(args):
         print(odom, odom_cell)
         
         execute_plan(robot, myMap, odom_cell, logo_pos_1)
-        robot.go_to(0.0, -0.3, 0.0, 0.0, -np.pi, 0.005)
+        # robot.go_to(0.0, -0.3, 0.0, 0.0, -np.pi, 0.005)
+        robot.rotate(-W_ROBOT, -np.pi, dir_w=False)
         robot.setSpeed(0.0, 0.0)
         
         print(robot.readOdometry())
@@ -198,7 +206,8 @@ def main(args):
         else:
             print("A reconocer en la otra posicion")
             execute_plan(robot, myMap, odom_cell, logo_pos_2)
-            robot.go_to(0.0, -0.3, 0.0, 0.0, -np.pi, 0.005)
+            #robot.go_to(0.0, -0.3, 0.0, 0.0, -np.pi, 0.005)
+            robot.rotate(-W_ROBOT, -np.pi, dir_w=False)
             robot.setSpeed(0.0, 0.0)
             
             found = rec.find_logo()
@@ -217,7 +226,9 @@ def main(args):
         # Salir por la puerta
         print(robot.readOdometry())
         
-        robot.go_to(0.0, -0.3, 0.0, 0.0, np.pi, 0.005)
+        #robot.go_to(0.0, -0.3, 0.0, 0.0, np.pi, 0.005)
+        robot.rotate(-W_ROBOT, np.pi, dir_w=False)
+        robot.setSpeed(0.0)
         print(robot.readOdometry())
         
         pos_f = ceil_to_odom(pos_f)
