@@ -34,7 +34,6 @@ def _8_A(robot):
     print(robot.readOdometry())
     #robot.go_to(0.12, -0.3, 0, 0, -np.pi/2, error, manual=True)
     robot.rotate(-W_ROBOT, -np.pi/2, v=V_ROBOT, dir_w=False)
-    
 
 def _8_B(robot):
     robot.go_to(0, 0.25, 0, 0, np.pi/2, error)
@@ -157,7 +156,7 @@ def main(args):
         else:
             _8_A(robot)
             x,y,th = robot.readOdometry()
-            robot.changeOdometry(x,0.6,th)
+            robot.changeOdometry(x,0.6,-1.7)
         robot.setSpeed(0.0, 0.0)
         print(robot.readOdometry())
         print("Fin S alcanzado")
