@@ -345,13 +345,13 @@ class RecLogo:
     def find_logo(self, idx = 1):
         rec_res = 0
         t = 0
-        while rec_res != 1 and t < 10:
-            #print(rec_res, t)
+        while rec_res != 1 and t < 3:
             rec_res = self.find_logos()
             t += 1
             time.sleep(0.1)
         
         return rec_res == idx or rec_res == 3
+
 
 """
 def main():
@@ -363,7 +363,7 @@ def main():
     if not os.path.isfile(img2):
         print("image " + img2 + " mal");
         return
-    rec = RecLogo(img1)
+    rec = RecLogo(img1,debug=3)
         
     print(rec.find_logo())
 if __name__ == '__main__':

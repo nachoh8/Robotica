@@ -1,19 +1,13 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
-import argparse
-import cv2
-import numpy as np
-import time
 from lib.Robot import Robot
 
 def main():
+    
     try:
 
-        robot = Robot(verbose=True) 
+        robot = Robot()
         robot.startOdometry()
-
-        robot.trackObject((0,200,20),(5,255,200) , (170,200,20),(180,255,200), turn_right = True)
-
         robot.stopOdometry()
 
 

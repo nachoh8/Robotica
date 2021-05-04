@@ -10,7 +10,7 @@ import time
 import os
 
 class Map2D:
-    def __init__(self, map_description_file):
+    def __init__(self, map_description_file, verbose=False):
         """
         Load and initialize map from file. \
 
@@ -33,7 +33,7 @@ class Map2D:
         # params to visualize
         self.mapLineStyle='r-'
         self.costValueStyle='g*'
-        self.verbose = True
+        self.verbose = verbose
         # set to False to stop displaying plots interactively (and maybe just save the screenshots)
         # self.verbose = False
         self.current_ax = None
@@ -491,8 +491,6 @@ class Map2D:
             return self.currentPath
 
         # transformar camino a mapa real de celdas
-        print(path)
-        print(self.costMatrix)
         self.currentPath = []
         for i in range(1, len(path)):
             x,y = path[i]

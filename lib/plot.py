@@ -70,10 +70,14 @@ def plot_show():
   plt.show()
 
 def main():
-  if len(sys.argv) != 2:
+  l = len(sys.argv)
+  if l < 2:
     print("Error")
-    return
-  plot_log_file(sys.argv[1], COLOR_RED, SMALL_SIZE, True)
+    exit(1)
+  
+  show = (l == 3)
+  
+  plot_log_file(sys.argv[1], COLOR_RED, SMALL_SIZE, show)
 
 if __name__ == "__main__":
     main()
