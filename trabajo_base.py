@@ -172,7 +172,7 @@ def main(args):
         # Red ball
         # avanzar una baldosa en X
         f_pos = ceil_to_odom(fin_pos)
-        robot.go_direct(f_pos[0]-0.4, f_pos[1])
+        robot.go_direct(f_pos[0]-0.5, f_pos[1])
         # avanzar en diagonal
         f_pos = ceil_to_odom(see_ball_pos)
         robot.go_direct(f_pos[0], f_pos[1])
@@ -217,7 +217,9 @@ def main(args):
         
         robot.rotate(W_ROBOT, -np.pi)
         robot.check_x(0, 0.4)
+        print("Odom barrido x ", robot.readOdometry())
         
+        robot.rotate(W_ROBOT, -np.pi)
         print("A reconocer | position ", robot.readOdometry())
         
         rec = RecLogo(logo_rec)
